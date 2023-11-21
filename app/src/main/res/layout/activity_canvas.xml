@@ -81,6 +81,7 @@
         android:orientation="vertical">
 
         <ImageButton
+            android:id="@+id/toolbar_handButton"
             android:alpha="0.1"
             android:padding="3dp"
             android:layout_width="match_parent"
@@ -91,6 +92,7 @@
             android:src="@drawable/hand" />
 
         <ImageButton
+            android:id="@+id/toolbar_penButton"
             android:alpha="0.7"
             android:padding="3dp"
             android:layout_marginVertical="10dp"
@@ -102,6 +104,7 @@
             android:src="@drawable/pen" />
 
         <ImageButton
+            android:id="@+id/toolbar_rectangleButton"
             android:alpha="0.1"
             android:padding="3dp"
             android:layout_marginVertical="10dp"
