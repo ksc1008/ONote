@@ -5,21 +5,22 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import java.util.LinkedList
 import kotlin.math.pow
 
+class CanvasViewModel: ViewModel() {
+    var width:Int = 0
+    var height:Int = 0
 
-class DrawingCanvas(var width:Int, var height:Int): ViewModel(){
     enum class DrawMod{PENDOWN, PENUP, RESET, IDLE}
     var currentDrawMod:DrawMod = DrawMod.IDLE
 
     private var bitmapCache: Bitmap
     val piecewiseCanvas:PiecewiseCanvas = PiecewiseCanvas()
     private val strokeList: LinkedList<CanvasStroke> = LinkedList()
-    private var _bitmap:Bitmap
-    private var canvasTemp:Canvas
+    private var _bitmap: Bitmap
+    private var canvasTemp: Canvas
 
     val rectangleArea = RectangleArea()
 
@@ -79,8 +80,8 @@ class DrawingCanvas(var width:Int, var height:Int): ViewModel(){
             strokeCap = Paint.Cap.ROUND
             strokeWidth = 10f
         }
-        //val s:CanvasStroke = CanvasStroke(strokeX,strokeY,this, strokePaint
-        //strokeList.add(s)
+        val s:CanvasStroke = CanvasStroke(strokeX,strokeY,piecewiseCanvas, strokePaint)
+        strokeList.add(s)
 
         currentDrawMod = DrawMod.PENDOWN
     }
@@ -111,7 +112,9 @@ class DrawingCanvas(var width:Int, var height:Int): ViewModel(){
                     continue
                 val t = piecewiseCanvas.checkOverlap(j,i)
                 while(t.isNotEmpty()){
-                    t.last().path.removeStroke()
+                    val stroke = t.last().path
+                    stroke.removeStroke()
+                    strokeList.remove(stroke)
                     erased = true
                 }
             }
@@ -160,6 +163,9 @@ class DrawingCanvas(var width:Int, var height:Int): ViewModel(){
         }
     }
     init{
+        width = 2000
+        height = 2000
+
         piecewiseCanvas.changeCache(height,width)
         _bitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888,true)
         canvasTemp = Canvas(_bitmap)

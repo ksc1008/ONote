@@ -4,13 +4,15 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.AttributeSet
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
+import com.example.canvastext.drawingCanvas.CanvasViewModel
 import com.example.canvastext.drawingCanvas.DrawingCanvas
 
-class MyCanvas(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
-    var canvas:DrawingCanvas = DrawingCanvas(2000,2000)
+class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
+    lateinit var canvas:CanvasViewModel
 
     enum class DrawingToolMod{PEN, ERASER}
 
@@ -29,6 +31,9 @@ class MyCanvas(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         strokeWidth = 4f
     }
 
+    fun injectViewModel(owner:ViewModelStoreOwner){
+        canvas = ViewModelProvider(owner).get(CanvasViewModel::class.java)
+    }
 
     fun changeErase(){
         currentDrawingTool = DrawingToolMod.ERASER
@@ -77,45 +82,30 @@ class MyCanvas(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
             MotionEvent.ACTION_DOWN->{
                 isPenDown = true
                 when(currentDrawingTool) {
-                    DrawingToolMod.PEN-> {
-                        canvas.addStroke(penX,penY)
-                        invalidate()
-                    }
+                    DrawingToolMod.PEN-> canvas.addStroke(penX,penY)
 
-                    DrawingToolMod.ERASER -> {
-                        canvas.eraseCircle(20f,event.x,event.y)
-                        invalidate()
-                    }
+                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f,event.x,event.y)
                 }
             }
 
             MotionEvent.ACTION_UP->{
                 isPenDown = false
                 when(currentDrawingTool){
-                    DrawingToolMod.PEN->{
-                        canvas.saveToBitmap()
-                    }
-                    DrawingToolMod.ERASER->{
+                    DrawingToolMod.PEN -> canvas.saveToBitmap()
 
-                    }
+                    DrawingToolMod.ERASER->{}
                 }
-                invalidate()
             }
 
             MotionEvent.ACTION_MOVE->{
                 when(currentDrawingTool){
-                    DrawingToolMod.PEN->{
-                        canvas.appendStroke(penX,penY)
-                        invalidate()
-                    }
+                    DrawingToolMod.PEN -> canvas.appendStroke(penX,penY)
 
-                    DrawingToolMod.ERASER->{
-                        canvas.eraseCircle(20f,event.x,event.y)
-                        invalidate()
-                    }
+                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f,event.x,event.y)
                 }
             }
         }
+        invalidate()
     }
 
     fun clearCanvas(){

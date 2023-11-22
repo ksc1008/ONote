@@ -7,7 +7,7 @@ import android.util.Log
 import java.util.Stack
 import kotlin.math.abs
 
-class CanvasStroke(private var x:Float, private var y:Float, private val container: DrawingCanvas, private val paint: Paint){
+class CanvasStroke(private var x:Float, private var y:Float, private val container: CanvasViewModel.PiecewiseCanvas, private val paint: Paint){
     class StrokePoint(val pX:Int, val pY:Int, val path: CanvasStroke){
         private lateinit var container:MutableList<StrokePoint>
         fun addToPiecewiseCanvas(cont:MutableList<StrokePoint>){
@@ -34,11 +34,11 @@ class CanvasStroke(private var x:Float, private var y:Float, private val contain
         y = newY
         val sp = StrokePoint(pointX.toInt(), pointY.toInt(), this)
         pathPoints.push(sp)
-        container.piecewiseCanvas.addPoint(sp.pX,sp.pY,sp)
+        container.addPoint(sp.pX,sp.pY,sp)
     }
 
     fun appendStroke(newX:Float, newY:Float){
-        if(newX<0 || newX >= container.piecewiseCanvas.cols || newY<0 || newY>= container.piecewiseCanvas.rows)
+        if(newX<0 || newX >= container.cols || newY<0 || newY>= container.rows)
             return
         if(abs(newX-x) + abs(newY-x) < drawThreshold)
             return
@@ -46,16 +46,14 @@ class CanvasStroke(private var x:Float, private var y:Float, private val contain
     }
 
     private fun removePathPoint(p:StrokePoint){
-        container.piecewiseCanvas.pathPoints[p.pY][p.pX].remove(p)
+        container.pathPoints[p.pY][p.pX].remove(p)
     }
 
-    fun removeStroke(removeFromContainer: Boolean =true){
+    fun removeStroke(){
         while(pathPoints.isNotEmpty()){
             removePathPoint(pathPoints.last())
             pathPoints.pop()
         }
-        if(removeFromContainer)
-            container.removeCanvasStroke(this)
     }
 
     fun draw(viewCanvas: Canvas?){

@@ -3,9 +3,14 @@ package com.example.canvastext
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.MotionEvent
 import android.widget.ImageButton
+import androidx.activity.viewModels
+import androidx.lifecycle.ViewModelProvider
 import com.example.canvastext.databinding.ActivityCanvasBinding
 import com.example.canvastext.databinding.ActivityMainBinding
+import com.example.canvastext.drawingCanvas.CanvasViewModel
+import com.example.canvastext.drawingCanvas.DrawingCanvas
 
 class CanvasActivity : AppCompatActivity() {
     val TOOLBAR_DEACTIVATE_TRANSPARENCY:Float = 0.1f
@@ -14,6 +19,7 @@ class CanvasActivity : AppCompatActivity() {
 
     lateinit var binding:ActivityCanvasBinding
     lateinit var buttons:ArrayList<ImageButton>
+    private val model: CanvasViewModel by viewModels()
 
     fun changeTool(toolbar:Toolbar){
         Log.d("toolbar log","change tool to ${toolbar.name}")
@@ -28,8 +34,12 @@ class CanvasActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
         binding = ActivityCanvasBinding.inflate(layoutInflater)
+
+
         setContentView(binding.root)
+        binding.canvas.injectViewModel(this)
         buttons = arrayListOf(binding.toolbarPenButton,binding.toolbarRectangleButton)
 
         binding.ClearButton.setOnClickListener{
@@ -52,5 +62,9 @@ class CanvasActivity : AppCompatActivity() {
                 changeTool(Toolbar.values()[i])
             }
         }
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        return super.onTouchEvent(event)
     }
 }
