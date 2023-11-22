@@ -3,13 +3,17 @@ package com.example.canvastext
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import com.example.canvastext.drawingCanvas.CanvasViewModel
-import com.example.canvastext.drawingCanvas.DrawingCanvas
+
+interface OnAreaAssignedListener{
+    fun invoke(area: RectF)
+}
 
 class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     lateinit var canvas:CanvasViewModel
@@ -17,10 +21,15 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     enum class DrawingToolMod{PEN, ERASER}
 
     private var currentDrawingTool:DrawingToolMod = DrawingToolMod.PEN
+    private var _onAreaAssignedListener:OnAreaAssignedListener? = null
     var currentTool: CanvasActivity.Toolbar = CanvasActivity.Toolbar.Pen
     private var isPenDown = false
     private var penX:Float = 0f
     private var penY:Float = 0f
+
+    fun setOnAreaAssignedListener(listener:OnAreaAssignedListener){
+        _onAreaAssignedListener = listener
+    }
 
     private var erasorIndicator= Paint().apply {
         isAntiAlias = true
@@ -32,7 +41,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     }
 
     fun injectViewModel(owner:ViewModelStoreOwner){
-        canvas = ViewModelProvider(owner).get(CanvasViewModel::class.java)
+        canvas = ViewModelProvider(owner)[CanvasViewModel::class.java]
     }
 
     fun changeErase(){
@@ -69,6 +78,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
                 canvas.rectangleArea.setP1(penX,penY)
             }
             MotionEvent.ACTION_UP->{
+                _onAreaAssignedListener?.invoke(canvas.rectangleArea.getArea())
                 canvas.rectangleArea.clear()
             }
             MotionEvent.ACTION_MOVE->{
@@ -83,7 +93,6 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
                 isPenDown = true
                 when(currentDrawingTool) {
                     DrawingToolMod.PEN-> canvas.addStroke(penX,penY)
-
                     DrawingToolMod.ERASER -> canvas.eraseCircle(20f,event.x,event.y)
                 }
             }

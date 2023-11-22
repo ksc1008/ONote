@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
 import android.util.Log
 import kotlin.math.max
 import kotlin.math.min
@@ -50,5 +51,9 @@ class RectangleArea (){
             canvas?.drawLine(x1,y2,x2,y2,paint)
             canvas?.drawLine(x2,y1,x2,y2,paint)
         }
+    }
+
+    fun getArea(): RectF {
+        return RectF(min(x1,x2),max(y1,y2),max(x1,x2),min(y1,y2))
     }
 }

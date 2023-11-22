@@ -18,13 +18,11 @@ import com.example.canvastext.databinding.CanvasMainBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
-    private lateinit var binding: ActivityMainBinding
+    private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
-
-        binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         setSupportActionBar(binding.toolbar)
@@ -36,7 +34,7 @@ class MainActivity : AppCompatActivity() {
         binding.fab.setOnClickListener { view ->run{
             val switchActivityIntent = Intent(this, CanvasActivity::class.java)
             startActivity(switchActivityIntent)
-        }
+            }
         }
     }
 
