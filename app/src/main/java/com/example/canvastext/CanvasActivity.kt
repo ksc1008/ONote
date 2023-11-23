@@ -7,10 +7,12 @@ import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.AnimationUtils
 import android.widget.ImageButton
 import androidx.activity.viewModels
 import com.example.canvastext.databinding.ActivityCanvasBinding
 import com.example.canvastext.drawingCanvas.CanvasViewModel
+import kotlin.math.abs
 
 class CanvasActivity : AppCompatActivity() {
     private val TOOLBAR_DEACTIVATE_TRANSPARENCY:Float = 0.1f
@@ -57,6 +59,7 @@ class CanvasActivity : AppCompatActivity() {
 
         binding.canvas.setOnAreaAssignedListener(object : OnAreaAssignedListener {
             override fun invoke(area: RectF) {
+                if(abs(area.height() * area.width()) > 10)
                 showFormulaFragment()
             }
         })
@@ -71,9 +74,20 @@ class CanvasActivity : AppCompatActivity() {
 
     fun showFormulaFragment(){
         if(binding.formulaFragmentContainer.getFragment<FormulaFragment?>()==null) {
+            binding.formulaFragmentContainer.startAnimation(AnimationUtils.loadAnimation(this,R.anim.formula_popin_animation))
+
             binding.formulaFragmentContainer.visibility = View.VISIBLE
             supportFragmentManager.beginTransaction()
-                .add(binding.formulaFragmentContainer.id, FormulaFragment()).commit()
+                .add(binding.formulaFragmentContainer.id, FormulaFragment().apply { setOnViewDestroyedListener(object: FormulaFragment.OnViewDestroyedListener{
+                    override fun invoke() {
+                        Log.d("","View Destroyed")
+                        binding.formulaFragmentContainer.visibility = View.INVISIBLE
+                    }
+                })
+                }).commit()
+
+
+
             formulaViewModel.setFormula("$$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$")
         }
         else{
