@@ -13,14 +13,16 @@ class CanvasViewModel: ViewModel() {
     var width:Int = 0
     var height:Int = 0
 
-    enum class DrawMod{PENDOWN, PENUP, RESET, IDLE}
+    enum class DrawMod{PENDOWN, PENUP, RESET, IDLE, IMAGEDOWN, IMAGEUP}
     var currentDrawMod:DrawMod = DrawMod.IDLE
 
     private var bitmapCache: Bitmap
     val piecewiseCanvas:PiecewiseCanvas = PiecewiseCanvas()
     private val strokeList: LinkedList<CanvasStroke> = LinkedList()
+    private val bitmapList: LinkedList<CanvasBitmap> = LinkedList()
     private var _bitmap: Bitmap
     private var canvasTemp: Canvas
+    private var placingBitmap:CanvasBitmap? = null
 
     val rectangleArea = RectangleArea()
 
@@ -86,6 +88,7 @@ class CanvasViewModel: ViewModel() {
         currentDrawMod = DrawMod.PENDOWN
     }
 
+
     fun appendStroke(strokeX:Float, strokeY:Float){
         if(strokeList.isNotEmpty())
             strokeList.last().appendStroke(strokeX,strokeY)
@@ -128,6 +131,21 @@ class CanvasViewModel: ViewModel() {
         currentDrawMod = DrawMod.PENUP
     }
 
+    fun startPlaceImage(bitmap:Bitmap,moveX:Float, moveY:Float){
+        placingBitmap = CanvasBitmap(moveX,moveY,bitmap.copy(bitmap.config,true))
+        currentDrawMod = DrawMod.IMAGEDOWN
+    }
+
+    fun movePlacingImage(moveX:Float, moveY:Float){
+        placingBitmap?.move(moveX,moveY)
+    }
+
+    fun placeImage(){
+        if(placingBitmap!=null)
+            bitmapList.add(placingBitmap!!)
+        currentDrawMod = DrawMod.IMAGEUP
+    }
+
     fun drawAll(canvas: Canvas?){
         if(canvas == null)
             return
@@ -153,6 +171,9 @@ class CanvasViewModel: ViewModel() {
                 for (stroke in strokeList) {
                     stroke.draw(canvasTemp)
                 }
+                for(bitmap in bitmapList){
+                    bitmap.draw(canvasTemp)
+                }
                 bitmapCache = _bitmap.copy(_bitmap.config,false)
                 canvas.drawBitmap(bitmapCache, 0f, 0f, null)
                 currentDrawMod = DrawMod.IDLE
@@ -160,8 +181,21 @@ class CanvasViewModel: ViewModel() {
             DrawMod.IDLE -> {
                 canvas.drawBitmap(bitmapCache, 0f, 0f, null)
             }
+            DrawMod.IMAGEDOWN ->{
+                canvas.drawBitmap(bitmapCache, 0f, 0f, null)
+                placingBitmap?.draw(canvas,true)
+            }
+            DrawMod.IMAGEUP ->{
+                canvasTemp.drawBitmap(bitmapCache, 0f, 0f, null)
+                placingBitmap?.draw(canvasTemp)
+                bitmapCache = _bitmap.copy(_bitmap.config,false)
+                canvas.drawBitmap(bitmapCache, 0f, 0f, null)
+                currentDrawMod = DrawMod.IDLE
+
+            }
         }
     }
+
     init{
         width = 2000
         height = 2000

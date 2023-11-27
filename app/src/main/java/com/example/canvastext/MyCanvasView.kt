@@ -1,10 +1,12 @@
 package com.example.canvastext
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import androidx.lifecycle.ViewModelProvider
@@ -18,8 +20,10 @@ interface OnAreaAssignedListener{
 class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     lateinit var canvas:CanvasViewModel
 
-    enum class DrawingToolMod{PEN, ERASER}
+    enum class DrawingToolMod{PEN, ERASER, IMAGE}
 
+    private var _tempBitmap:Bitmap? = null
+    private var placingImage:Boolean = false
     private var currentDrawingTool:DrawingToolMod = DrawingToolMod.PEN
     private var _onAreaAssignedListener:OnAreaAssignedListener? = null
     var currentTool: CanvasActivity.Toolbar = CanvasActivity.Toolbar.Pen
@@ -91,9 +95,14 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         when(event.action){
             MotionEvent.ACTION_DOWN->{
                 isPenDown = true
-                when(currentDrawingTool) {
-                    DrawingToolMod.PEN-> canvas.addStroke(penX,penY)
-                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f,event.x,event.y)
+                when (currentDrawingTool) {
+                    DrawingToolMod.PEN -> canvas.addStroke(penX, penY)
+                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f, event.x, event.y)
+                    DrawingToolMod.IMAGE -> {
+                        Log.d("Place Image Log","Adding Bitmap to Canvas. (${_tempBitmap?.width?:0},${_tempBitmap?.height?:0})")
+                        canvas.startPlaceImage(_tempBitmap?: Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888),penX,penY)
+                        //_tempBitmap = null
+                    }
                 }
             }
 
@@ -101,16 +110,19 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
                 isPenDown = false
                 when(currentDrawingTool){
                     DrawingToolMod.PEN -> canvas.saveToBitmap()
-
                     DrawingToolMod.ERASER->{}
+                    DrawingToolMod.IMAGE->{
+                        canvas.placeImage()
+                        changePen()
+                    }
                 }
             }
 
             MotionEvent.ACTION_MOVE->{
-                when(currentDrawingTool){
-                    DrawingToolMod.PEN -> canvas.appendStroke(penX,penY)
-
-                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f,event.x,event.y)
+                when (currentDrawingTool) {
+                    DrawingToolMod.PEN -> canvas.appendStroke(penX, penY)
+                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f, event.x, event.y)
+                    DrawingToolMod.IMAGE -> canvas.movePlacingImage(penX,penY)
                 }
             }
         }
@@ -120,6 +132,12 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     fun clearCanvas(){
         canvas.clear()
         invalidate()
+    }
+
+    fun addBitmapToCanvas(bitmap:Bitmap){
+        currentDrawingTool = DrawingToolMod.IMAGE
+        Log.d("Place Image Log","Call Add Bitmap Method. (${bitmap.width},${bitmap.height})")
+        _tempBitmap = bitmap
     }
 
     override fun onDraw(canvas: Canvas?) {

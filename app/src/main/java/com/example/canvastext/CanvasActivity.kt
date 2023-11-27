@@ -1,11 +1,9 @@
 package com.example.canvastext
 
 import android.graphics.RectF
-import android.opengl.Visibility
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.view.MotionEvent
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.ImageButton
@@ -23,7 +21,7 @@ class CanvasActivity : AppCompatActivity() {
     private val formulaViewModel:FormulaViewModel by viewModels()
 
     lateinit var buttons:ArrayList<ImageButton>
-    private val model: CanvasViewModel by viewModels()
+    private val canvasViewModel: CanvasViewModel by viewModels()
 
     private fun changeTool(toolbar:Toolbar){
         Log.d("toolbar log","change tool to ${toolbar.name}")
@@ -60,7 +58,7 @@ class CanvasActivity : AppCompatActivity() {
         binding.canvas.setOnAreaAssignedListener(object : OnAreaAssignedListener {
             override fun invoke(area: RectF) {
                 if(abs(area.height() * area.width()) > 10)
-                showFormulaFragment()
+                    showFormulaFragment()
             }
         })
 
@@ -78,12 +76,27 @@ class CanvasActivity : AppCompatActivity() {
 
             binding.formulaFragmentContainer.visibility = View.VISIBLE
             supportFragmentManager.beginTransaction()
-                .add(binding.formulaFragmentContainer.id, FormulaFragment().apply { setOnViewDestroyedListener(object: FormulaFragment.OnViewDestroyedListener{
-                    override fun invoke() {
-                        Log.d("","View Destroyed")
-                        binding.formulaFragmentContainer.visibility = View.INVISIBLE
-                    }
+                .add(binding.formulaFragmentContainer.id, FormulaFragment().apply {
+                    setOnViewDestroyedListener(object: FormulaFragment.OnViewDestroyedListener{
+                        override fun invoke() {
+                            Log.d("","View Destroyed")
+                            binding.formulaFragmentContainer.visibility = View.INVISIBLE
+                        }
                 })
+                    setOnButtonClickedListener(object: FormulaFragment.OnBtnClickedListener{
+                        override fun invokeButton1() {
+                            val img = getFormulaImage()
+                            Log.d("Capture Log","(${img.width},${img.height})")
+                            binding.canvas.addBitmapToCanvas(img)
+
+                        }
+
+                        override fun invokeButton2() {
+                        }
+
+                        override fun invokeButton3() {
+                        }
+                    })
                 }).commit()
 
 

@@ -117,8 +117,9 @@
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/formulaFragmentContainer"
+        android:clickable="true"
         android:layout_width="match_parent"
-        android:layout_height="160dp"
+        android:layout_height="200dp"
         android:layout_marginHorizontal="30dp"
         android:elevation="12dp"
         android:background="@drawable/round_fragment_box"
