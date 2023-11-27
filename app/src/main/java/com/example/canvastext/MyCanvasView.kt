@@ -31,6 +31,9 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     private var penX:Float = 0f
     private var penY:Float = 0f
 
+    private var imagePlaceOffsetX = 0f
+    private var imagePlaceOffsetY = 0f
+
     fun setOnAreaAssignedListener(listener:OnAreaAssignedListener){
         _onAreaAssignedListener = listener
     }
@@ -100,7 +103,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
                     DrawingToolMod.ERASER -> canvas.eraseCircle(20f, event.x, event.y)
                     DrawingToolMod.IMAGE -> {
                         Log.d("Place Image Log","Adding Bitmap to Canvas. (${_tempBitmap?.width?:0},${_tempBitmap?.height?:0})")
-                        canvas.startPlaceImage(_tempBitmap?: Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888),penX,penY)
+                        canvas.startPlaceImage(_tempBitmap?: Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888),penX + imagePlaceOffsetX, penY + imagePlaceOffsetY)
                         //_tempBitmap = null
                     }
                 }
@@ -122,7 +125,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
                 when (currentDrawingTool) {
                     DrawingToolMod.PEN -> canvas.appendStroke(penX, penY)
                     DrawingToolMod.ERASER -> canvas.eraseCircle(20f, event.x, event.y)
-                    DrawingToolMod.IMAGE -> canvas.movePlacingImage(penX,penY)
+                    DrawingToolMod.IMAGE -> canvas.movePlacingImage(penX + imagePlaceOffsetX,penY + imagePlaceOffsetY)
                 }
             }
         }
@@ -137,6 +140,8 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     fun addBitmapToCanvas(bitmap:Bitmap){
         currentDrawingTool = DrawingToolMod.IMAGE
         Log.d("Place Image Log","Call Add Bitmap Method. (${bitmap.width},${bitmap.height})")
+        imagePlaceOffsetX = -bitmap.width.toFloat()/2
+        imagePlaceOffsetY = -bitmap.height.toFloat()/2
         _tempBitmap = bitmap
     }
 

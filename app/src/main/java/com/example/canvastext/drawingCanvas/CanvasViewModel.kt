@@ -69,6 +69,7 @@ class CanvasViewModel: ViewModel() {
         for(s in strokeList){
             s.removeStroke()
         }
+        bitmapList.clear()
         strokeList.clear()
         currentDrawMod = DrawMod.RESET
     }
