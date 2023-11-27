@@ -2,6 +2,7 @@ package com.example.canvastext
 
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.delay
 
 class ServerRequestViewModel: ViewModel() {

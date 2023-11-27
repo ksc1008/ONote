@@ -2,19 +2,27 @@ package com.example.canvastext
 
 import android.graphics.Bitmap
 import android.graphics.RectF
+import android.opengl.Visibility
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
+import android.view.animation.Animation
+import android.view.animation.Animation.AnimationListener
 import android.view.animation.AnimationUtils
 import android.widget.ImageButton
 import androidx.activity.viewModels
+import androidx.dynamicanimation.animation.DynamicAnimation.OnAnimationEndListener
+import com.daasuu.ei.Ease
+import com.daasuu.ei.EasingInterpolator
 import com.example.canvastext.databinding.ActivityCanvasBinding
 import com.example.canvastext.drawingCanvas.CanvasViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -49,6 +57,7 @@ class CanvasActivity : AppCompatActivity() {
 
         setContentView(binding.root)
         binding.canvas.injectViewModel(this)
+        NetworkManager.getInstance(this)
         buttons = arrayListOf(binding.toolbarPenButton,binding.toolbarRectangleButton)
 
         binding.ClearButton.setOnClickListener{
@@ -78,50 +87,78 @@ class CanvasActivity : AppCompatActivity() {
                 changeTool(Toolbar.values()[i])
             }
         }
+
+        supportFragmentManager.beginTransaction()
+            .add(binding.formulaFragmentContainer.id, FormulaFragment().apply {
+                setOnViewDestroyedListener(object: FormulaFragment.OnViewDestroyedListener{
+                    override fun invoke() {
+                        Log.d("","View Destroyed")
+
+                        val fadeAnimation =  AnimationUtils.loadAnimation(context,R.anim.formula_popout_animation)
+                        fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
+                        fadeAnimation.setAnimationListener(object:AnimationListener{
+                            override fun onAnimationStart(p0: Animation?) {
+                            }
+
+                            override fun onAnimationEnd(p0: Animation?) {
+                                binding.formulaFragmentContainer.visibility = View.INVISIBLE
+                            }
+
+                            override fun onAnimationRepeat(p0: Animation?) {
+                            }
+                        })
+                        binding.formulaFragmentContainer.startAnimation(fadeAnimation)
+                    }
+                })
+                setOnButtonClickedListener(object: FormulaFragment.OnBtnClickedListener{
+                    override fun invokeButton1() {
+                        val img = getFormulaImage()
+                        Log.d("Capture Log","(${img.width},${img.height})")
+                        binding.canvas.addBitmapToCanvas(img)
+
+                    }
+
+                    override fun invokeButton2() {
+                    }
+
+                    override fun invokeButton3() {
+                    }
+                })
+            }).commit()
+
+        for(i:Int in 0 until buttons.size){
+            buttons[i].setOnClickListener {
+                changeTool(Toolbar.values()[i])
+            }
+        }
     }
 
     fun showFormulaFragment(){
-        if(binding.formulaFragmentContainer.getFragment<FormulaFragment?>()==null) {
-            binding.formulaFragmentContainer.startAnimation(AnimationUtils.loadAnimation(this,R.anim.formula_popin_animation))
+        getFromServer(Bitmap.createBitmap(2,2,Bitmap.Config.ARGB_8888))
+    }
 
-            binding.formulaFragmentContainer.visibility = View.VISIBLE
-            supportFragmentManager.beginTransaction()
-                .add(binding.formulaFragmentContainer.id, FormulaFragment().apply {
-                    setOnViewDestroyedListener(object: FormulaFragment.OnViewDestroyedListener{
-                        override fun invoke() {
-                            Log.d("","View Destroyed")
-                            binding.formulaFragmentContainer.visibility = View.INVISIBLE
-                        }
-                })
-                    setOnButtonClickedListener(object: FormulaFragment.OnBtnClickedListener{
-                        override fun invokeButton1() {
-                            val img = getFormulaImage()
-                            Log.d("Capture Log","(${img.width},${img.height})")
-                            binding.canvas.addBitmapToCanvas(img)
-
-                        }
-
-                        override fun invokeButton2() {
-                        }
-
-                        override fun invokeButton3() {
-                        }
-                    })
-                }).commit()
-
-
-
+    fun popInFormula(){
+        if(binding.formulaFragmentContainer.visibility == View.INVISIBLE) {
             formulaViewModel.setFormula("$$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$")
+            val fadeAnimation =  AnimationUtils.loadAnimation(this,R.anim.formula_popin_animation)
+            fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
+            binding.formulaFragmentContainer.startAnimation(fadeAnimation)
+            binding.formulaFragmentContainer.visibility = View.VISIBLE
+            binding.formulaFragmentContainer.isEnabled = true
         }
         else{
             formulaViewModel.setFormula("$$ x = \\frac{-a \\pm \\sqrt{a^3-4bd}}{2a} $$")
         }
+
     }
 
     fun getFromServer(bitmap: Bitmap){
-        scope.launch {
-            val s = serverRequestViewModel.getFormulaFromServer(bitmap)
-            formulaViewModel.setFormula(s)
+        scope.launch(Dispatchers.Main) {
+            val result = scope.async {
+                serverRequestViewModel.getFormulaFromServer(bitmap)
+            }.await()
+            popInFormula()
+            //formulaViewModel.setFormula("$$ x = \\frac{-a \\pm \\sqrt{a^3-4bd}}{2a} $$")
         }
     }
 }

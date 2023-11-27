@@ -21,11 +21,11 @@ class NetworkManager private constructor(context: Context) {
     }
 
     fun somePostRequestReturningString(param1: Any?, listener: NetworkGetListener<String?>) {
-        val url = prefixURL + "this/request/suffix"
+        val url = prefixURL + "api/mathpix?test=test"
         val jsonParams: MutableMap<String?, Any?> = HashMap()
-        jsonParams["param1"] = param1
+        jsonParams["test"] = param1
         val request = JsonObjectRequest(
-            Request.Method.POST, url, JSONObject(jsonParams),
+            Request.Method.GET, url, JSONObject(jsonParams),
             { response ->
                 Log.d(
                     "$TAG: ",
@@ -48,10 +48,10 @@ class NetworkManager private constructor(context: Context) {
     companion object {
         private const val TAG = "NetworkManager"
         private var instance: NetworkManager? = null
-        private const val prefixURL = "https://noteapp.k-paas.org/api/mathpix"
+        private const val prefixURL = "https://noteapp.k-paas.org/"
         @Synchronized
         fun getInstance(context: Context): NetworkManager? {
-            if (null == instance) instance = NetworkManager(context)
+            if (instance == null) instance = NetworkManager(context)
             return instance
         }
 

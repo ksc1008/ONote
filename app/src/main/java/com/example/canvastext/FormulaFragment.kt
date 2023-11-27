@@ -79,6 +79,7 @@ class FormulaFragment : Fragment() {
         viewModel.outputString.observe(viewLifecycleOwner, formulaObserver)
         binding?.closeButton?.setOnClickListener{
             close()
+            _onViewDestroyedListener?.invoke()
         }
 
         binding?.btn1?.setOnClickListener{
@@ -100,7 +101,7 @@ class FormulaFragment : Fragment() {
     }
 
     private fun close(){
-        activity?.supportFragmentManager?.beginTransaction()?.remove(this)?.commit()
+        //activity?.supportFragmentManager?.beginTransaction()?.remove(this)?.commit()
     }
 
     fun getFormulaImage():Bitmap{
