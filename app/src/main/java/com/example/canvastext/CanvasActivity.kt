@@ -1,5 +1,6 @@
 package com.example.canvastext
 
+import android.graphics.Bitmap
 import android.graphics.RectF
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -10,15 +11,24 @@ import android.widget.ImageButton
 import androidx.activity.viewModels
 import com.example.canvastext.databinding.ActivityCanvasBinding
 import com.example.canvastext.drawingCanvas.CanvasViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 class CanvasActivity : AppCompatActivity() {
     private val TOOLBAR_DEACTIVATE_TRANSPARENCY:Float = 0.1f
     private val TOOLBAR_ACTIVATE_TRANSPARENCY:Float = 0.6f
+    val scope = CoroutineScope(Job() + Dispatchers.Main)
+
+
     enum class Toolbar(var id:Int) {Pen(0),Rectangle(1)}
 
     private val binding:ActivityCanvasBinding by lazy { ActivityCanvasBinding.inflate(layoutInflater) }
     private val formulaViewModel:FormulaViewModel by viewModels()
+    private val serverRequestViewModel:ServerRequestViewModel by viewModels()
 
     lateinit var buttons:ArrayList<ImageButton>
     private val canvasViewModel: CanvasViewModel by viewModels()
@@ -105,6 +115,13 @@ class CanvasActivity : AppCompatActivity() {
         }
         else{
             formulaViewModel.setFormula("$$ x = \\frac{-a \\pm \\sqrt{a^3-4bd}}{2a} $$")
+        }
+    }
+
+    fun getFromServer(bitmap: Bitmap){
+        scope.launch {
+            val s = serverRequestViewModel.getFormulaFromServer(bitmap)
+            formulaViewModel.setFormula(s)
         }
     }
 }

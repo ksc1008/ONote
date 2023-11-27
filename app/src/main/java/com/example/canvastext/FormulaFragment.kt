@@ -15,6 +15,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.example.canvastext.databinding.FragmentFormulaBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class FormulaFragment : Fragment() {
 
@@ -33,6 +36,7 @@ class FormulaFragment : Fragment() {
     }
 
     private val viewModel: FormulaViewModel by activityViewModels()
+    private val serverModel: ServerRequestViewModel by activityViewModels()
 
     private var binding:FragmentFormulaBinding? = null
 
@@ -104,5 +108,11 @@ class FormulaFragment : Fragment() {
         val canvas:Canvas = Canvas(bit)
         binding?.formulaDisplay?.draw(canvas)
         return bit
+    }
+
+    fun getCalculate(){
+        GlobalScope.launch(Dispatchers.Main) {
+            serverModel.getFormulaFromServer(Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888))
+        }
     }
 }
