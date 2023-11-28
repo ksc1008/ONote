@@ -148,7 +148,7 @@ class CanvasActivity : AppCompatActivity() {
             binding.formulaFragmentContainer.isEnabled = true
         }
         else{
-            formulaViewModel.setFormula("$$ x = \\frac{-a \\pm \\sqrt{a^3-4bd}}{2a} $$")
+            formulaViewModel.setFormula("$$ y=a x+b $$")
         }
 
     }
@@ -158,6 +158,7 @@ class CanvasActivity : AppCompatActivity() {
             val result = scope.async {
                 serverRequestViewModel.getFormulaFromServer(bitmap)
             }.await()
+            result.first
             popInFormula()
             //formulaViewModel.setFormula("$$ x = \\frac{-a \\pm \\sqrt{a^3-4bd}}{2a} $$")
         }
