@@ -2,25 +2,23 @@ package com.example.canvastext
 
 import android.graphics.Bitmap
 import android.graphics.RectF
-import android.opengl.Visibility
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.view.MotionEvent
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.Animation.AnimationListener
 import android.view.animation.AnimationUtils
 import android.widget.ImageButton
 import androidx.activity.viewModels
-import androidx.dynamicanimation.animation.DynamicAnimation.OnAnimationEndListener
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
 import com.example.canvastext.databinding.ActivityCanvasBinding
 import com.example.canvastext.drawingCanvas.CanvasViewModel
+import com.example.canvastext.formulaViewer.FormulaFragment
+import com.example.canvastext.formulaViewer.FormulaViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -32,10 +30,10 @@ class CanvasActivity : AppCompatActivity() {
     val scope = CoroutineScope(Job() + Dispatchers.Main)
 
 
-    enum class Toolbar(var id:Int) {Pen(0),Rectangle(1)}
+    enum class Toolbar(var id:Int) {Pen(0),Rectangle(1),Hand(2)}
 
     private val binding:ActivityCanvasBinding by lazy { ActivityCanvasBinding.inflate(layoutInflater) }
-    private val formulaViewModel:FormulaViewModel by viewModels()
+    private val formulaViewModel: FormulaViewModel by viewModels()
     private val serverRequestViewModel:ServerRequestViewModel by viewModels()
 
     lateinit var buttons:ArrayList<ImageButton>
@@ -58,7 +56,7 @@ class CanvasActivity : AppCompatActivity() {
         setContentView(binding.root)
         binding.canvas.injectViewModel(this)
         NetworkManager.getInstance(this)
-        buttons = arrayListOf(binding.toolbarPenButton,binding.toolbarRectangleButton)
+        buttons = arrayListOf(binding.toolbarPenButton,binding.toolbarRectangleButton, binding.toolbarHandButton)
 
         binding.ClearButton.setOnClickListener{
             binding.canvas.clearCanvas()
@@ -73,6 +71,7 @@ class CanvasActivity : AppCompatActivity() {
             binding.toolbarPenButton.setImageResource(R.drawable.pen)
             binding.canvas.changePen()
         }
+
 
         binding.canvas.setOnAreaAssignedListener(object : OnAreaAssignedListener {
             override fun invoke(area: RectF) {
@@ -134,7 +133,9 @@ class CanvasActivity : AppCompatActivity() {
     }
 
     fun showFormulaFragment(){
-        getFromServer(Bitmap.createBitmap(2,2,Bitmap.Config.ARGB_8888))
+        val bitmap = binding.canvas.getAreaBitmap()
+        if(bitmap != null)
+            getFromServer(bitmap)
     }
 
     fun popInFormula(){

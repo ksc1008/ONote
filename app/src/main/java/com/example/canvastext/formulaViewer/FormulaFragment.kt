@@ -1,19 +1,16 @@
-package com.example.canvastext
+package com.example.canvastext.formulaViewer
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.RectF
-import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
-import android.transition.TransitionInflater
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.OnLongClickListener
 import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
+import com.example.canvastext.ServerRequestViewModel
 import com.example.canvastext.databinding.FragmentFormulaBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -40,9 +37,9 @@ class FormulaFragment : Fragment() {
 
     private var binding:FragmentFormulaBinding? = null
 
-    private var _onButtonClickedListener:OnBtnClickedListener? = null
+    private var _onButtonClickedListener: OnBtnClickedListener? = null
 
-    private var _onViewDestroyedListener:OnViewDestroyedListener? = null
+    private var _onViewDestroyedListener: OnViewDestroyedListener? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,

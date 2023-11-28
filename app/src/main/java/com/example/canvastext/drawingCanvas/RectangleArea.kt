@@ -54,6 +54,10 @@ class RectangleArea (){
     }
 
     fun getArea(): RectF {
-        return RectF(min(x1,x2),max(y1,y2),max(x1,x2),min(y1,y2))
+        return RectF(min(x1,x2),min(y1,y2),max(x1,x2),max(y1,y2))
+    }
+
+    fun getActive():Boolean{
+        return active
     }
 }

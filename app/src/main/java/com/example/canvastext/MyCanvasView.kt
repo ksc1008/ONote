@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.PointF
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.Log
@@ -74,11 +75,25 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         when (currentTool){
             CanvasActivity.Toolbar.Pen -> penEvent(event)
             CanvasActivity.Toolbar.Rectangle -> rectangleEvent(event)
+            CanvasActivity.Toolbar.Hand-> handEvent(event)
         }
 
         return true
     }
 
+    fun handEvent(event: MotionEvent){
+        when(event.action){
+            MotionEvent.ACTION_DOWN->{
+                canvas.setHandHoldPoint(PointF(penX,penY))
+            }
+            MotionEvent.ACTION_UP->{
+            }
+            MotionEvent.ACTION_MOVE->{
+                canvas.moveView(PointF(penX,penY))
+            }
+        }
+        invalidate()
+    }
     fun rectangleEvent(event:MotionEvent){
         when(event.action){
             MotionEvent.ACTION_DOWN->{
@@ -86,7 +101,6 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
             }
             MotionEvent.ACTION_UP->{
                 _onAreaAssignedListener?.invoke(canvas.rectangleArea.getArea())
-                canvas.rectangleArea.clear()
             }
             MotionEvent.ACTION_MOVE->{
                 canvas.rectangleArea.drag(penX,penY)
@@ -156,5 +170,9 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
             }
         }
         super.onDraw(canvas)
+    }
+
+    fun getAreaBitmap():Bitmap?{
+        return canvas.getAreaPixels()
     }
 }

@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PointF
 import android.graphics.PorterDuff
 import androidx.lifecycle.ViewModel
 import java.util.LinkedList
@@ -24,10 +25,18 @@ class CanvasViewModel: ViewModel() {
     private var canvasTemp: Canvas
     private var placingBitmap:CanvasBitmap? = null
 
+    @JvmField
+    var handHoldPoint= PointF(0f,0f)
+    @JvmField
+    var handMovePoint= PointF(0f,0f)
+    var viewPoint:PointF = PointF(0f,0f)
+
     val rectangleArea = RectangleArea()
 
     class PiecewiseCanvas{
         val pathPoints:MutableList<MutableList<MutableList<CanvasStroke.StrokePoint>>> = mutableListOf()
+
+        lateinit var bgBitmap:Bitmap
 
         var rows:Int = 0
         var cols:Int = 0
@@ -45,6 +54,9 @@ class CanvasViewModel: ViewModel() {
 
             cols = newCols
             rows = newRows
+
+            bgBitmap = Bitmap.createBitmap(cols,rows,Bitmap.Config.ARGB_8888)
+            bgBitmap.eraseColor(Color.WHITE)
         }
 
         fun addPoint(x:Int, y:Int, point: CanvasStroke.StrokePoint){
@@ -83,7 +95,10 @@ class CanvasViewModel: ViewModel() {
             strokeCap = Paint.Cap.ROUND
             strokeWidth = 10f
         }
-        val s:CanvasStroke = CanvasStroke(strokeX,strokeY,piecewiseCanvas, strokePaint)
+        if(strokeX+viewPoint.x<0 || strokeX+viewPoint.x>=piecewiseCanvas.cols || strokeY+viewPoint.y<0 || strokeY+viewPoint.y >= piecewiseCanvas.rows )
+            return
+
+        val s:CanvasStroke = CanvasStroke(strokeX+viewPoint.x,strokeY+viewPoint.y,piecewiseCanvas, strokePaint)
         strokeList.add(s)
 
         currentDrawMod = DrawMod.PENDOWN
@@ -92,7 +107,7 @@ class CanvasViewModel: ViewModel() {
 
     fun appendStroke(strokeX:Float, strokeY:Float){
         if(strokeList.isNotEmpty())
-            strokeList.last().appendStroke(strokeX,strokeY)
+            strokeList.last().appendStroke(strokeX + viewPoint.x,strokeY + viewPoint.y)
     }
 
     fun removeCanvasStroke(s:CanvasStroke){
@@ -100,8 +115,10 @@ class CanvasViewModel: ViewModel() {
     }
 
     fun eraseCircle(radius:Float, eraseX:Float, eraseY:Float){
+        val viewEraseX = eraseX + viewPoint.x
+        val viewEraseY = eraseY + viewPoint.y
         fun feasible(i:Int, j:Int):Boolean{
-            if((eraseX-j).pow(2) + (eraseY-i).pow(2) > radius.pow(2))
+            if((viewEraseX-j).pow(2) + (viewEraseY-i).pow(2) > radius.pow(2))
                 return false
             if(j<0 || j>=piecewiseCanvas.cols || i<0 || i>=piecewiseCanvas.rows)
                 return false
@@ -110,8 +127,8 @@ class CanvasViewModel: ViewModel() {
 
         var erased = false
 
-        for(j:Int in (eraseX-radius).toInt()..(eraseX+radius).toInt()){
-            for(i:Int in (eraseY-radius).toInt() .. (eraseY+radius).toInt()){
+        for(j:Int in (viewEraseX-radius).toInt()..(viewEraseX+radius).toInt()){
+            for(i:Int in (viewEraseY-radius).toInt() .. (viewEraseY+radius).toInt()){
                 if(!feasible(i,j))
                     continue
                 val t = piecewiseCanvas.checkOverlap(j,i)
@@ -133,12 +150,12 @@ class CanvasViewModel: ViewModel() {
     }
 
     fun startPlaceImage(bitmap:Bitmap,moveX:Float, moveY:Float){
-        placingBitmap = CanvasBitmap(moveX,moveY,bitmap.copy(bitmap.config,true))
+        placingBitmap = CanvasBitmap(moveX+viewPoint.x,moveY+viewPoint.y,bitmap.copy(bitmap.config,true))
         currentDrawMod = DrawMod.IMAGEDOWN
     }
 
     fun movePlacingImage(moveX:Float, moveY:Float){
-        placingBitmap?.move(moveX,moveY)
+        placingBitmap?.move(moveX+viewPoint.x,moveY+viewPoint.y)
     }
 
     fun placeImage(){
@@ -151,14 +168,19 @@ class CanvasViewModel: ViewModel() {
         if(canvas == null)
             return
 
+        canvas.drawColor(Color.LTGRAY)
+        canvas.save()
+        canvas.translate(-viewPoint.x,-viewPoint.y)
+        canvas.drawBitmap(piecewiseCanvas.bgBitmap,0f,0f, null)
+
         when(currentDrawMod){
             DrawMod.PENDOWN -> {
                 canvas.drawBitmap(bitmapCache, 0f, 0f, null)
-                strokeList.last().draw(canvas)
+                strokeList.lastOrNull()?.draw(canvas)
             }
             DrawMod.PENUP -> {
                 canvasTemp.drawBitmap(bitmapCache, 0f, 0f, null)
-                strokeList.last().draw(canvasTemp)
+                strokeList.lastOrNull()?.draw(canvasTemp)
 
                 //canvas.setBitmap(bitmapCache)
                 bitmapCache = _bitmap.copy(_bitmap.config,false)
@@ -180,21 +202,48 @@ class CanvasViewModel: ViewModel() {
                 currentDrawMod = DrawMod.IDLE
             }
             DrawMod.IDLE -> {
-                canvas.drawBitmap(bitmapCache, 0f, 0f, null)
+                canvas.drawBitmap(bitmapCache, 0f,0f, null)
             }
             DrawMod.IMAGEDOWN ->{
-                canvas.drawBitmap(bitmapCache, 0f, 0f, null)
+                canvas.drawBitmap(bitmapCache, 0f,0f, null)
                 placingBitmap?.draw(canvas,true)
             }
             DrawMod.IMAGEUP ->{
-                canvasTemp.drawBitmap(bitmapCache, 0f, 0f, null)
+                canvasTemp.drawBitmap(bitmapCache, 0f,0f, null)
                 placingBitmap?.draw(canvasTemp)
                 bitmapCache = _bitmap.copy(_bitmap.config,false)
-                canvas.drawBitmap(bitmapCache, 0f, 0f, null)
+                canvas.drawBitmap(bitmapCache, 0f,0f, null)
                 currentDrawMod = DrawMod.IDLE
 
             }
         }
+        canvas.restore()
+    }
+
+    fun getAreaPixels():Bitmap?{
+        if(!rectangleArea.getActive()){
+            return null
+        }
+
+        val left = rectangleArea.getArea().left.toInt() + viewPoint.x.toInt()
+        val top = rectangleArea.getArea().top.toInt() + viewPoint.y.toInt()
+
+        val bitmap = Bitmap.createBitmap(bitmapCache,left,
+            top,
+            rectangleArea.getArea().width().toInt(),rectangleArea.getArea().height().toInt())
+
+        rectangleArea.clear()
+        return bitmap
+    }
+
+    fun setHandHoldPoint(pivot:PointF){
+        handHoldPoint = pivot
+        handMovePoint = pivot
+    }
+    fun moveView(newPivot:PointF){
+        val d = PointF(handMovePoint.x-newPivot.x,handMovePoint.y-newPivot.y)
+        handMovePoint = newPivot
+        viewPoint = PointF(viewPoint.x + d.x, viewPoint.y + d.y)
     }
 
     init{

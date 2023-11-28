@@ -21,9 +21,10 @@ class NetworkManager private constructor(context: Context) {
     }
 
     fun somePostRequestReturningString(param1: Any?, listener: NetworkGetListener<String?>) {
-        val url = prefixURL + "api/mathpix?test=test"
+        val url = prefixURL + "api/mathpix"
         val jsonParams: MutableMap<String?, Any?> = HashMap()
-        jsonParams["test"] = param1
+        jsonParams["img"] = param1
+        Log.d("$TAG: ","request body: {'img' : $param1}")
         val request = JsonObjectRequest(
             Request.Method.GET, url, JSONObject(jsonParams),
             { response ->
