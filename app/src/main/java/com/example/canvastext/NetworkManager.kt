@@ -26,12 +26,16 @@ class NetworkManager private constructor(context: Context) {
         jsonParams["img"] = param1
         val request = JsonObjectRequest(
             Request.Method.POST, url, JSONObject(jsonParams),
-            { response ->
+            { response:JSONObject ->
                 Log.d(
                     "$TAG: ",
                     "somePostRequest Response : $response"
                 )
-                listener.getResult(response.toString())
+                if(response.has("latex_styled"))
+                    listener.getResult(response.getString("latex_styled"))
+                else{
+                    listener.getResult("")
+                }
             }
         ) { error ->
             if (null != error.networkResponse) {

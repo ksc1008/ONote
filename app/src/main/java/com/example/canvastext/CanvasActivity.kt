@@ -140,15 +140,12 @@ class CanvasActivity : AppCompatActivity() {
 
     fun popInFormula(){
         if(binding.formulaFragmentContainer.visibility == View.INVISIBLE) {
-            formulaViewModel.setFormula("$$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$")
+            //formulaViewModel.setFormula("$$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$")
             val fadeAnimation =  AnimationUtils.loadAnimation(this,R.anim.formula_popin_animation)
             fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
             binding.formulaFragmentContainer.startAnimation(fadeAnimation)
             binding.formulaFragmentContainer.visibility = View.VISIBLE
             binding.formulaFragmentContainer.isEnabled = true
-        }
-        else{
-            formulaViewModel.setFormula("$$ y=a x+b $$")
         }
 
     }
@@ -158,9 +155,10 @@ class CanvasActivity : AppCompatActivity() {
             val result = scope.async {
                 serverRequestViewModel.getFormulaFromServer(bitmap)
             }.await()
-            result.first
+            Log.d("result:",result.toString())
+            formulaViewModel.setFormula("$$ ${result.first} $$")
             popInFormula()
-            //formulaViewModel.setFormula("$$ x = \\frac{-a \\pm \\sqrt{a^3-4bd}}{2a} $$")
+            //
         }
     }
 }

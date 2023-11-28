@@ -53,7 +53,7 @@ class ServerRequestViewModel: ViewModel() {
             }
 
         })
-        while(finished){
+        while(!finished){
             delay(100L)
         }
         return Pair(response,success)
