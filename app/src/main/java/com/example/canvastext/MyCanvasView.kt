@@ -146,6 +146,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         invalidate()
     }
 
+
     fun clearCanvas(){
         canvas.clear()
         invalidate()

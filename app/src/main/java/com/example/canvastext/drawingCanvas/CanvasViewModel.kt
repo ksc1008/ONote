@@ -4,8 +4,10 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PixelFormat
 import android.graphics.PointF
 import android.graphics.PorterDuff
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import java.util.LinkedList
 import kotlin.math.pow
@@ -173,12 +175,16 @@ class CanvasViewModel: ViewModel() {
         canvas.translate(-viewPoint.x,-viewPoint.y)
         canvas.drawBitmap(piecewiseCanvas.bgBitmap,0f,0f, null)
 
+        canvasTemp.density = canvas.density
+        canvasTemp.drawFilter = canvas.drawFilter
+
         when(currentDrawMod){
             DrawMod.PENDOWN -> {
                 canvas.drawBitmap(bitmapCache, 0f, 0f, null)
                 strokeList.lastOrNull()?.draw(canvas)
             }
             DrawMod.PENUP -> {
+                canvasTemp.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
                 canvasTemp.drawBitmap(bitmapCache, 0f, 0f, null)
                 strokeList.lastOrNull()?.draw(canvasTemp)
 
@@ -209,6 +215,7 @@ class CanvasViewModel: ViewModel() {
                 placingBitmap?.draw(canvas,true)
             }
             DrawMod.IMAGEUP ->{
+                canvasTemp.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
                 canvasTemp.drawBitmap(bitmapCache, 0f,0f, null)
                 placingBitmap?.draw(canvasTemp)
                 bitmapCache = _bitmap.copy(_bitmap.config,false)
@@ -218,6 +225,7 @@ class CanvasViewModel: ViewModel() {
             }
         }
         canvas.restore()
+        Log.d("",canvasTemp.isHardwareAccelerated.toString())
     }
 
     fun getAreaPixels():Bitmap?{

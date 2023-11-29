@@ -1,18 +1,17 @@
 package com.example.canvastext
 
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.graphics.RectF
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.view.View
-import android.view.animation.Animation
-import android.view.animation.Animation.AnimationListener
-import android.view.animation.AnimationUtils
+import android.view.MotionEvent
 import android.widget.ImageButton
 import androidx.activity.viewModels
-import com.daasuu.ei.Ease
-import com.daasuu.ei.EasingInterpolator
+import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintSet.Motion
+import androidx.core.view.marginLeft
+import androidx.core.view.marginTop
 import com.example.canvastext.databinding.ActivityCanvasBinding
 import com.example.canvastext.drawingCanvas.CanvasViewModel
 import com.example.canvastext.formulaViewer.FormulaFragment
@@ -23,6 +22,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+
 
 class CanvasActivity : AppCompatActivity() {
     private val TOOLBAR_DEACTIVATE_TRANSPARENCY:Float = 0.1f
@@ -39,7 +39,14 @@ class CanvasActivity : AppCompatActivity() {
     lateinit var buttons:ArrayList<ImageButton>
     private val canvasViewModel: CanvasViewModel by viewModels()
 
+    private var lastPointerX = 0f
+    private var lastPointerY = 0f
+    private var draggingImage:Boolean = false
+    private var canvasX = 0
+    private var canvasY = 0
+
     private fun changeTool(toolbar:Toolbar){
+
         Log.d("toolbar log","change tool to ${toolbar.name}")
         for(i:Int in 0 until buttons.size){
             if(i == toolbar.id)
@@ -89,38 +96,18 @@ class CanvasActivity : AppCompatActivity() {
 
         supportFragmentManager.beginTransaction()
             .add(binding.formulaFragmentContainer.id, FormulaFragment().apply {
-                setOnViewDestroyedListener(object: FormulaFragment.OnViewDestroyedListener{
+                setOnImageCopiedListener(object: FormulaFragment.OnImageCopiedListener{
                     override fun invoke() {
-                        Log.d("","View Destroyed")
-
-                        val fadeAnimation =  AnimationUtils.loadAnimation(context,R.anim.formula_popout_animation)
-                        fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
-                        fadeAnimation.setAnimationListener(object:AnimationListener{
-                            override fun onAnimationStart(p0: Animation?) {
-                            }
-
-                            override fun onAnimationEnd(p0: Animation?) {
-                                binding.formulaFragmentContainer.visibility = View.INVISIBLE
-                            }
-
-                            override fun onAnimationRepeat(p0: Animation?) {
-                            }
-                        })
-                        binding.formulaFragmentContainer.startAnimation(fadeAnimation)
-                    }
-                })
-                setOnButtonClickedListener(object: FormulaFragment.OnBtnClickedListener{
-                    override fun invokeButton1() {
                         val img = getFormulaImage()
-                        Log.d("Capture Log","(${img.width},${img.height})")
-                        binding.canvas.addBitmapToCanvas(img)
+                        if(img != null) {
+                            Log.d("Capture Log", "(${img.width},${img.height})")
+                            binding.canvas.addBitmapToCanvas(img)
+                            changeTool(Toolbar.Pen)
+                            binding.canvas.dispatchTouchEvent(MotionEvent.obtain(0,0, MotionEvent.ACTION_DOWN,
+                                lastPointerX-canvasX,lastPointerY-canvasY,0))
+                            draggingImage = true
 
-                    }
-
-                    override fun invokeButton2() {
-                    }
-
-                    override fun invokeButton3() {
+                        }
                     }
                 })
             }).commit()
@@ -133,6 +120,13 @@ class CanvasActivity : AppCompatActivity() {
         binding.toolbarFunctionButton.setOnClickListener{
             popInFormula()
         }
+
+        binding.canvas.viewTreeObserver.addOnGlobalLayoutListener {
+            val location = IntArray(2)
+            binding.canvas.getLocationOnScreen(location)
+            canvasX = location[0]
+            canvasY = location[1]
+        }
     }
 
     fun showFormulaFragment(){
@@ -144,15 +138,29 @@ class CanvasActivity : AppCompatActivity() {
     private fun popInFormula(){
         if(!formulaViewModel.hasFormula())
             return
-        if(binding.formulaFragmentContainer.visibility == View.INVISIBLE) {
-            //formulaViewModel.setFormula("$$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$")
-            val fadeAnimation =  AnimationUtils.loadAnimation(this,R.anim.formula_popin_animation)
-            fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
-            binding.formulaFragmentContainer.startAnimation(fadeAnimation)
-            binding.formulaFragmentContainer.visibility = View.VISIBLE
-            binding.formulaFragmentContainer.isEnabled = true
-        }
+        binding.formulaFragmentContainer.getFragment<FormulaFragment?>()?.show()
+    }
 
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        lastPointerX = ev?.x?:0f
+        lastPointerY = ev?.y?:0f
+        if(draggingImage){
+            var ev2:MotionEvent? = null
+            if(ev!=null) {
+                ev2 = MotionEvent.obtain(
+                    ev.downTime,
+                    ev.eventTime,
+                    ev.action,
+                    ev.x + binding.canvas.x - canvasX,
+                    ev.y + binding.canvas.y - canvasY,
+                    0
+                )
+            }
+            binding.canvas.dispatchTouchEvent(ev2)
+            if(ev?.action == MotionEvent.ACTION_UP)
+                draggingImage = false
+        }
+        return super.dispatchTouchEvent(ev)
     }
 
     fun getFromServer(bitmap: Bitmap){
@@ -168,4 +176,5 @@ class CanvasActivity : AppCompatActivity() {
             }
         }
     }
+
 }
