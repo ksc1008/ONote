@@ -225,7 +225,6 @@ class CanvasViewModel: ViewModel() {
             }
         }
         canvas.restore()
-        Log.d("",canvasTemp.isHardwareAccelerated.toString())
     }
 
     fun getAreaPixels():Bitmap?{
