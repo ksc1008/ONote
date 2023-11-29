@@ -130,6 +130,9 @@ class CanvasActivity : AppCompatActivity() {
                 changeTool(Toolbar.values()[i])
             }
         }
+        binding.toolbarFunctionButton.setOnClickListener{
+            popInFormula()
+        }
     }
 
     fun showFormulaFragment(){
@@ -138,7 +141,9 @@ class CanvasActivity : AppCompatActivity() {
             getFromServer(bitmap)
     }
 
-    fun popInFormula(){
+    private fun popInFormula(){
+        if(!formulaViewModel.hasFormula())
+            return
         if(binding.formulaFragmentContainer.visibility == View.INVISIBLE) {
             //formulaViewModel.setFormula("$$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$")
             val fadeAnimation =  AnimationUtils.loadAnimation(this,R.anim.formula_popin_animation)
@@ -156,9 +161,11 @@ class CanvasActivity : AppCompatActivity() {
                 serverRequestViewModel.getFormulaFromServer(bitmap)
             }.await()
             Log.d("result:",result.toString())
-            formulaViewModel.setFormula("$$ ${result.first} $$")
-            popInFormula()
-            //
+
+            if(result.second) {
+                formulaViewModel.setFormula("$$ ${result.first} $$")
+                popInFormula()
+            }
         }
     }
 }

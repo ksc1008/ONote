@@ -47,8 +47,10 @@ class ServerRequestViewModel: ViewModel() {
                 if(`object`==null){
                     success = false
                 }
-                else
-                    response=`object`
+                else {
+                    response = `object`
+                    success = true
+                }
                 finished = true
             }
 
