@@ -4,12 +4,12 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.PixelFormat
 import android.graphics.PointF
 import android.graphics.PorterDuff
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import java.util.LinkedList
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 
 class CanvasViewModel: ViewModel() {
@@ -26,7 +26,7 @@ class CanvasViewModel: ViewModel() {
     private var _bitmap: Bitmap
     private var canvasTemp: Canvas
     private var placingBitmap:CanvasBitmap? = null
-
+    private var _scaleFactor = 1f
     @JvmField
     var handHoldPoint= PointF(0f,0f)
     @JvmField
@@ -36,20 +36,23 @@ class CanvasViewModel: ViewModel() {
     val rectangleArea = RectangleArea()
 
     class PiecewiseCanvas{
-        val pathPoints:MutableList<MutableList<MutableList<CanvasStroke.StrokePoint>>> = mutableListOf()
+        private val pathPoints:MutableList<MutableList<MutableList<CanvasStroke.StrokePoint>>> = mutableListOf()
 
         lateinit var bgBitmap:Bitmap
 
-        var rows:Int = 0
-        var cols:Int = 0
+        private var rows:Int = 0
+        private var cols:Int = 0
 
-        fun changeCache(newRows:Int, newCols:Int){
-            val dRow = newRows - rows
-            val dCol = newCols - cols
+        private var _width:Int = 0
+        private var _height:Int = 0
 
-            for (i:Int in 1..dRow){
+        fun changeCache(newRows:Int, newCols:Int, width:Int, height:Int){
+            this._width = width
+            this._height = height
+
+            for (i: Int in 1..newRows) {
                 pathPoints.add(mutableListOf())
-                for(j:Int in 1..dCol){
+                for (j: Int in 1..newCols) {
                     pathPoints.last().add(mutableListOf())
                 }
             }
@@ -57,20 +60,47 @@ class CanvasViewModel: ViewModel() {
             cols = newCols
             rows = newRows
 
-            bgBitmap = Bitmap.createBitmap(cols,rows,Bitmap.Config.ARGB_8888)
+            bgBitmap = Bitmap.createBitmap(_width,_height,Bitmap.Config.ARGB_8888)
             bgBitmap.eraseColor(Color.WHITE)
         }
 
-        fun addPoint(x:Int, y:Int, point: CanvasStroke.StrokePoint){
-            if(x<0 || x>=cols || y<0 || y>=rows){
-                return
+        fun getWidth():Int{
+            return _width
+        }
+
+        fun getHeight():Int{
+            return _height
+        }
+        fun getIndex(x:Int, y:Int):Pair<Int,Int>{
+            return Pair((x.toFloat() / (_width.toFloat()/cols)).toInt(),(x.toFloat() / (_height.toFloat()/rows)).toInt())
+        }
+
+        fun addPoint(point: CanvasStroke.StrokePoint){
+            val idx = getIndex(point.pX,point.pY)
+            if(idx.first<0 || idx.first>=cols || idx.second<0 || idx.second>=rows){
+                throw ArrayIndexOutOfBoundsException("Can't add point at point (${point.pX}, ${point.pY})")
             }
-            pathPoints[y][x].add(point)
-            point.addToPiecewiseCanvas(pathPoints[y][x])
+            pathPoints[idx.second][idx.first].add(point)
+            point.addToPiecewiseCanvas(pathPoints[idx.second][idx.first])
         }
 
         fun checkOverlap(x:Int, y:Int):MutableList<CanvasStroke.StrokePoint>{
-            return pathPoints[y][x]
+            val idx = getIndex(x,y)
+            val list:MutableList<CanvasStroke.StrokePoint> = mutableListOf()
+
+            for(p in pathPoints[idx.second][idx.first]){
+                if(p.pX == x && p.pY == y)
+                    list.add(p)
+            }
+            return list
+        }
+
+        fun removePathPoint(p:CanvasStroke.StrokePoint){
+            val idx = getIndex(p.pX,p.pY)
+            pathPoints[idx.second][idx.first].remove(p)
+        }
+        fun dispose(){
+            pathPoints.clear()
         }
 
     }
@@ -78,6 +108,10 @@ class CanvasViewModel: ViewModel() {
     fun resize(){
 
     }
+
+    fun getScaleFactor():Float{return _scaleFactor}
+    fun setScaleFactor(value:Float){
+        _scaleFactor = max(0.4f, min(value, 2.0f))}
 
     fun clear(){
         for(s in strokeList){
@@ -97,7 +131,7 @@ class CanvasViewModel: ViewModel() {
             strokeCap = Paint.Cap.ROUND
             strokeWidth = 10f
         }
-        if(strokeX+viewPoint.x<0 || strokeX+viewPoint.x>=piecewiseCanvas.cols || strokeY+viewPoint.y<0 || strokeY+viewPoint.y >= piecewiseCanvas.rows )
+        if(strokeX+viewPoint.x<0 || strokeX+viewPoint.x>=piecewiseCanvas.getWidth() || strokeY+viewPoint.y<0 || strokeY+viewPoint.y >= piecewiseCanvas.getHeight() )
             return
 
         val s:CanvasStroke = CanvasStroke(strokeX+viewPoint.x,strokeY+viewPoint.y,piecewiseCanvas, strokePaint)
@@ -122,7 +156,7 @@ class CanvasViewModel: ViewModel() {
         fun feasible(i:Int, j:Int):Boolean{
             if((viewEraseX-j).pow(2) + (viewEraseY-i).pow(2) > radius.pow(2))
                 return false
-            if(j<0 || j>=piecewiseCanvas.cols || i<0 || i>=piecewiseCanvas.rows)
+            if(j<0 || j>=piecewiseCanvas.getWidth() || i<0 || i>=piecewiseCanvas.getHeight())
                 return false
             return true
         }
@@ -134,10 +168,12 @@ class CanvasViewModel: ViewModel() {
                 if(!feasible(i,j))
                     continue
                 val t = piecewiseCanvas.checkOverlap(j,i)
-                while(t.isNotEmpty()){
-                    val stroke = t.last().path
-                    stroke.removeStroke()
-                    strokeList.remove(stroke)
+                for(st in t){
+                    val stroke = st.path
+                    if(!stroke.removed){
+                        stroke.removeStroke()
+                        strokeList.remove(stroke)
+                    }
                     erased = true
                 }
             }
@@ -173,6 +209,7 @@ class CanvasViewModel: ViewModel() {
         canvas.drawColor(Color.LTGRAY)
         canvas.save()
         canvas.translate(-viewPoint.x,-viewPoint.y)
+        canvas.scale(_scaleFactor,_scaleFactor)
         canvas.drawBitmap(piecewiseCanvas.bgBitmap,0f,0f, null)
 
         canvasTemp.density = canvas.density
@@ -257,10 +294,16 @@ class CanvasViewModel: ViewModel() {
         width = 2000
         height = 2000
 
-        piecewiseCanvas.changeCache(height,width)
+        piecewiseCanvas.changeCache(100,100,height,width)
         _bitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888,true)
         canvasTemp = Canvas(_bitmap)
 
         bitmapCache = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888,true)
+    }
+
+    override fun onCleared() {
+        piecewiseCanvas.dispose()
+        strokeList.clear()
+        super.onCleared()
     }
 }

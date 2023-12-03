@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="#00000000"
+    android:layout_height="match_parent"
+    tools:context=".PenselectFragment">
+
+    <ImageButton
+        android:elevation="12dp"
+        android:id="@+id/toolButton"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginStart="25dp"
+        android:layout_marginBottom="25dp"
+        android:background="@drawable/round_fragment_box"
+        android:backgroundTint="#DDDDDD"
+        android:src="@drawable/close"
+        android:scaleType="centerInside"
+        android:padding="10dp"
+        android:rotation="45"
+        app:tint="#454545" />
+
+    <ImageView
+        android:clickable="true"
+        android:visibility="invisible"
+        android:id="@+id/toolButtonsBackground"
+        android:transformPivotY="165dp"
+        android:scaleY="1"
+        android:elevation="3dp"
+        android:layout_width="40dp"
+        android:layout_height="165dp"
+        app:layout_constraintBottom_toBottomOf="@id/toolButton"
+        app:layout_constraintStart_toStartOf="@id/toolButton"
+        android:layout_marginBottom="25dp"
+        android:layout_marginStart="5dp"
+        android:background="@drawable/round_fragment_box"
+        android:backgroundTint="#F0F0F0"
+        />
+
+    <ImageView
+        android:id="@+id/tools_eraserButton"
+        android:visibility="invisible"
+        android:elevation="3dp"
+        app:layout_constraintBottom_toTopOf="@id/toolButton"
+        app:layout_constraintLeft_toLeftOf="@id/toolButton"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/round_fragment_box"
+        android:padding="5dp"
+        android:backgroundTint="#DDDDDD"
+        android:src="@drawable/eraser"
+        />
+
+    <ImageView
+        android:id="@+id/tools_penButton"
+        android:visibility="invisible"
+        android:elevation="3dp"
+        app:layout_constraintBottom_toTopOf="@id/toolButton"
+        app:layout_constraintLeft_toLeftOf="@id/toolButton"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginBottom="50dp"
+        android:src="@drawable/pen"
+        android:background="@drawable/round_fragment_box"
+        android:padding="5dp"
+        android:backgroundTint="#DDDDDD"
+        />
+
+    <ImageView
+        android:id="@+id/tools_highlighterButton"
+        android:visibility="invisible"
+        android:elevation="3dp"
+        app:layout_constraintBottom_toTopOf="@id/toolButton"
+        app:layout_constraintLeft_toLeftOf="@id/toolButton"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginBottom="90dp"
+        android:background="@drawable/round_fragment_box"
+        android:padding="5dp"
+        android:src="@drawable/highlighter"
+        android:backgroundTint="#DDDDDD"
+        />
+
+    <LinearLayout
+        android:clickable="true"
+        android:id="@+id/penSettingMenu"
+        android:visibility="visible"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginHorizontal="100dp"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/round_fragment_box"
+        android:backgroundTint="#FAFAFA"
+        android:elevation="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        >
+
+        <ImageButton
+            android:layout_marginLeft="10dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:scaleType="centerInside"
+            android:background="#AA0000"
+            />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/widthSlider"
+            android:valueFrom="1"
+            android:valueTo="12"
+            android:value="5"
+            android:layout_width="140dp"
+            android:layout_marginLeft="10dp"
+            android:layout_height="15dp"/>
+
+        <TextView
+            android:layout_width="50dp"
+            android:layout_height="match_parent"
+            android:text="5"
+            android:gravity="center_vertical"
+            />
+
+
+    </LinearLayout>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,8 +5,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.ColorFilter
-import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.util.AttributeSet
 import android.util.Log
@@ -19,15 +17,13 @@ import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
 import com.example.canvastext.R
 import katex.hourglass.`in`.mathlib.MathView
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlin.math.max
 import kotlin.math.min
 
 class FormulaViewer(ctx: Context?, attrs: AttributeSet?): MathView(ctx,attrs) {
     var keepTouching:Boolean = false
-
     var popAnimation:Animation? = null
-    val anim2:ObjectAnimator = ObjectAnimator.ofFloat(this,"elevation",10f)
+    val elevationAnimator:ObjectAnimator = ObjectAnimator.ofFloat(this,"elevation",10f)
 
     var alternativeDraw:Boolean = false
     var cachedBitmap:Bitmap? = null
@@ -80,15 +76,15 @@ class FormulaViewer(ctx: Context?, attrs: AttributeSet?): MathView(ctx,attrs) {
                 startAnimation(popAnimation)
 
 
-                anim2.interpolator = EasingInterpolator(Ease.QUAD_IN)
-                anim2.start()
+                elevationAnimator.interpolator = EasingInterpolator(Ease.QUAD_IN)
+                elevationAnimator.start()
             }
 
             MotionEvent.ACTION_UP->{
                 longTouchListener?.invokeTouchUp()
                 keepTouching = false
                 popAnimation?.cancel()
-                anim2.end()
+                elevationAnimator.end()
                 clearAnimation()
 
                 scaleX = 1.0f
@@ -117,7 +113,7 @@ class FormulaViewer(ctx: Context?, attrs: AttributeSet?): MathView(ctx,attrs) {
         longTouchListener = listener
     }
 
-    fun findActualDrawRange() {
+    private fun findActualDrawRange() {
         val bitmap: Bitmap = Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         Log.d("Original Size: ","($originalWidth,$originalHeight)")

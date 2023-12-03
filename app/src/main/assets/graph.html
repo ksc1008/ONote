@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>desmos api</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="./desmos.js"></script>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #calculator {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<script>
+    const latex = 'y=e^{-x}+ \\frac{x}{2}'
+</script>
+<body>
+<div id="calculator"></div>
+
+<script>
+    const elt = document.getElementById('calculator');
+
+    function Graphing(latex) {
+        const calculator = Desmos.GraphingCalculator(elt);
+        calculator.setExpression({id:1, latex:latex});
+        calculator.updateSettings({
+            expressionsCollapsed: true
+        });
+    }
+    Graphing(latex);
+
+</script>
+
+
+</body>
+</html>

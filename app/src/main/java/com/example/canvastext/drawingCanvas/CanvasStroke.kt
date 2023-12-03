@@ -20,6 +20,7 @@ class CanvasStroke(private var x:Float, private var y:Float, private val contain
     val drawThreshold = 2f
 
     private val pathPoints: Stack<StrokePoint> = Stack()
+    var removed = false
     var path: Path = Path()
     init{
         path.moveTo(x,y)
@@ -35,7 +36,7 @@ class CanvasStroke(private var x:Float, private var y:Float, private val contain
 
         addDividedPathPoint(sp)
         pathPoints.push(sp)
-        container.addPoint(sp.pX,sp.pY,sp)
+        container.addPoint(sp)
     }
 
     private fun addDividedPathPoint(sp:StrokePoint){
@@ -49,27 +50,25 @@ class CanvasStroke(private var x:Float, private var y:Float, private val contain
                 for(i in 1..cnt){
                     val newSp = StrokePoint(first.first + (normal.first * i).toInt(), first.second + (normal.second * i).toInt(), this, false)
                     pathPoints.push(newSp)
-                    container.addPoint(newSp.pX,newSp.pY,newSp)
+                    container.addPoint(newSp)
                 }
             }
         }
     }
 
     fun appendStroke(newX:Float, newY:Float){
-        if(newX<0 || newX >= container.cols || newY<0 || newY>= container.rows)
+        if(newX<0 || newX >= container.getWidth() || newY<0 || newY>= container.getHeight())
             return
         if(abs(newX-x) + abs(newY-x) < drawThreshold)
             return
         addStrokePath(newX,newY)
     }
 
-    private fun removePathPoint(p:StrokePoint){
-        container.pathPoints[p.pY][p.pX].remove(p)
-    }
 
     fun removeStroke(){
+        removed = true
         while(pathPoints.isNotEmpty()){
-            removePathPoint(pathPoints.last())
+            container.removePathPoint(pathPoints.last())
             pathPoints.pop()
         }
     }

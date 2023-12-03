@@ -8,12 +8,31 @@
 
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="20dp"
+        android:layout_marginTop="20dp">
+
+        <com.example.canvastext.MyCanvasView
+            android:id="@+id/canvas"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:layout_editor_absoluteX="0dp"
+            tools:layout_editor_absoluteY="0dp" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="72dp"
         app:layout_constraintStart_toStartOf="parent"
+        android:background="#00000000"
+        android:clickable="false"
         app:layout_constraintTop_toTopOf="parent">
 
         <Button
+            android:id="@+id/btn_back"
             android:layout_width="70dp"
             android:layout_height="match_parent"
             app:layout_constraintLeft_toLeftOf="parent"
@@ -22,20 +41,6 @@
             android:layout_marginLeft="8dp" android:text="Back"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginBottom="72dp"
-        android:layout_marginTop="72dp">
-
-        <com.example.canvastext.MyCanvasView
-            android:id="@+id/canvas"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="72dp"
@@ -138,4 +143,30 @@
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/penSelectFragmentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:clickable="false"
+        android:background="#00000000"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:name="com.example.canvastext.PenselectFragment"
+        />
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/graphFragmentContainer"
+        android:clickable="true"
+        android:layout_width="match_parent"
+        android:layout_height="350dp"
+        app:layout_constraintBottom_toTopOf="@id/formulaFragmentContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginBottom="10dp"
+        android:layout_marginHorizontal="30dp"
+        android:visibility="invisible"
+        android:elevation="12dp"
+        android:background="@drawable/round_fragment_box">
+
+    </androidx.fragment.app.FragmentContainerView>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,15 +1,21 @@
 package com.example.canvastext
 
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.PointF
+import android.graphics.Rect
 import android.graphics.RectF
+import android.os.Build
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowInsets
+import androidx.annotation.RequiresApi
+import androidx.core.view.ViewCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import com.example.canvastext.drawingCanvas.CanvasViewModel
@@ -34,6 +40,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
 
     private var imagePlaceOffsetX = 0f
     private var imagePlaceOffsetY = 0f
+    var exclusionRects = listOf(Rect(0,top,10,bottom),Rect(10,top,20,bottom),Rect(20,top,30,bottom),Rect(40,top,50,bottom),Rect(50,top,60,bottom),Rect(60,top,70,bottom))
 
     fun setOnAreaAssignedListener(listener:OnAreaAssignedListener){
         _onAreaAssignedListener = listener
@@ -48,8 +55,8 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         strokeWidth = 4f
     }
 
-    fun injectViewModel(owner:ViewModelStoreOwner){
-        canvas = ViewModelProvider(owner)[CanvasViewModel::class.java]
+    fun injectViewModel(viewModel:CanvasViewModel){
+        canvas = viewModel
     }
 
     fun changeErase(){
@@ -160,7 +167,10 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         _tempBitmap = bitmap
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onDraw(canvas: Canvas?) {
+        //ViewCompat.setSystemGestureExclusionRects(this,exclusionRects)
+        //Log.d(TAG,"(${exclusionRects[0].left},${exclusionRects[0].top}),(${exclusionRects[0].right},${exclusionRects[0].bottom})")
         this.canvas.drawAll(canvas)
         if(currentTool == CanvasActivity.Toolbar.Rectangle){
             this.canvas.rectangleArea.drawRectangle(canvas)
@@ -175,5 +185,34 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
 
     fun getAreaBitmap():Bitmap?{
         return canvas.getAreaPixels()
+    }
+
+    fun scaleEvent(scaleFactorMultiplier:Float){
+        canvas.setScaleFactor(canvas.getScaleFactor() * scaleFactorMultiplier)
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        for(r in exclusionRects){
+            r.bottom = 500
+        }
+
+        super.onSizeChanged(w, h, oldw, oldh)
+
+    }
+
+    override fun onApplyWindowInsets(insets: WindowInsets?): WindowInsets {
+        return super.onApplyWindowInsets(insets)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        //systemGestureExclusionRects=exclusionRects
+        //ViewCompat.setSystemGestureExclusionRects(this,exclusionRects)
+        //Log.d(TAG,"(${exclusionRects[0].left},${exclusionRects[0].top}),(${exclusionRects[0].right},${exclusionRects[0].bottom})")
+        super.onLayout(changed, left, top, right, bottom)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
     }
 }

@@ -9,11 +9,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
+import android.webkit.WebView
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
+import com.example.canvastext.OnImageCopiedListener
 import com.example.canvastext.R
 import com.example.canvastext.ServerRequestViewModel
 import com.example.canvastext.databinding.FragmentFormulaBinding
@@ -23,9 +25,6 @@ import kotlinx.coroutines.launch
 
 class FormulaFragment : Fragment() {
 
-    interface OnImageCopiedListener{
-        fun invoke()
-    }
     interface OnViewDestroyedListener{
         fun invoke()
     }
@@ -34,10 +33,6 @@ class FormulaFragment : Fragment() {
         fun invokeButton1()
         fun invokeButton2()
         fun invokeButton3()
-    }
-
-    companion object {
-        fun newInstance() = FormulaFragment()
     }
 
     private val viewModel: FormulaViewModel by activityViewModels()
@@ -57,6 +52,7 @@ class FormulaFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+        WebView.enableSlowWholeDocumentDraw()
         binding = FragmentFormulaBinding.inflate(layoutInflater)
         return binding?.root
     }
@@ -69,6 +65,7 @@ class FormulaFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WebView.enableSlowWholeDocumentDraw()
     }
 
     fun setOnViewDestroyedListener(listener: OnViewDestroyedListener){
@@ -87,7 +84,7 @@ class FormulaFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val formulaObserver = Observer<String> { value ->
-            binding?.formulaDisplay?.setDisplayText(value)
+            binding?.formulaDisplay?.setDisplayText("$$ $value $$")
         }
         viewModel.outputString.observe(viewLifecycleOwner, formulaObserver)
         binding?.closeButton?.setOnClickListener{
@@ -118,7 +115,7 @@ class FormulaFragment : Fragment() {
             }
 
         })
-        viewModel.setFormula("$$ a x+b=c $$")
+        viewModel.setFormula("y=x^2 +3 x+1")
     }
 
     private fun close(){
@@ -136,7 +133,8 @@ class FormulaFragment : Fragment() {
     }
 
     fun hide(){
-        Log.d("","View Destroyed")
+        if(viewInActivity.visibility == View.INVISIBLE)
+            return
 
         viewInActivity.isEnabled = false
         binding?.formulaDisplay?.isEnabled=false
