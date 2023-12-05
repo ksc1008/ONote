@@ -48,24 +48,6 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
-            android:id="@+id/penButton"
-            android:layout_width="85dp"
-            android:layout_height="match_parent"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginVertical="10dp"
-            android:layout_marginStart="8dp" android:text="Pen"/>
-
-        <Button
-            android:id="@+id/EraserButton"
-            android:layout_width="85dp"
-            android:layout_height="match_parent"
-            app:layout_constraintLeft_toRightOf="@id/penButton"
-            app:layout_constraintStart_toEndOf="@id/penButton"
-            android:layout_marginVertical="10dp"
-            android:layout_marginStart="8dp" android:text="Eraser"/>
-
-        <Button
             android:id="@+id/ClearButton"
             android:layout_width="85dp"
             android:layout_height="match_parent"

@@ -27,6 +27,11 @@ class CanvasViewModel: ViewModel() {
     private var canvasTemp: Canvas
     private var placingBitmap:CanvasBitmap? = null
     private var _scaleFactor = 1f
+
+    private var currentPenWidth:Float = 10f
+    private var currentPenColor:Int = Color.BLACK
+
+
     @JvmField
     var handHoldPoint= PointF(0f,0f)
     @JvmField
@@ -129,12 +134,14 @@ class CanvasViewModel: ViewModel() {
             style = Paint.Style.STROKE
             strokeJoin = Paint.Join.ROUND
             strokeCap = Paint.Cap.ROUND
-            strokeWidth = 10f
+            strokeWidth = currentPenWidth
+            color = currentPenColor
         }
+
         if(strokeX+viewPoint.x<0 || strokeX+viewPoint.x>=piecewiseCanvas.getWidth() || strokeY+viewPoint.y<0 || strokeY+viewPoint.y >= piecewiseCanvas.getHeight() )
             return
 
-        val s:CanvasStroke = CanvasStroke(strokeX+viewPoint.x,strokeY+viewPoint.y,piecewiseCanvas, strokePaint)
+        val s = CanvasStroke(strokeX+viewPoint.x,strokeY+viewPoint.y,piecewiseCanvas, strokePaint)
         strokeList.add(s)
 
         currentDrawMod = DrawMod.PENDOWN
@@ -288,6 +295,15 @@ class CanvasViewModel: ViewModel() {
         val d = PointF(handMovePoint.x-newPivot.x,handMovePoint.y-newPivot.y)
         handMovePoint = newPivot
         viewPoint = PointF(viewPoint.x + d.x, viewPoint.y + d.y)
+    }
+
+    fun setPenWidth(width:Float){
+        currentPenWidth = width * 2
+
+    }
+
+    fun setPenColor(color:Int){
+        currentPenColor = color
     }
 
     init{

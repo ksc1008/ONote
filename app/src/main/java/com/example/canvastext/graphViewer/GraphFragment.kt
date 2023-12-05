@@ -74,10 +74,6 @@ class GraphFragment : Fragment() {
             binding?.graphDisplay?.setAxis(axisEnabled)
         }
 
-        binding?.btn3?.setOnClickListener {
-            binding?.graphDisplay?.screenshot()
-        }
-
         binding?.graphDisplay?.setLongTouchListener(object: FormulaViewer.FormulaLongTouchListener{
             override fun invokeTouchDown() {
             }

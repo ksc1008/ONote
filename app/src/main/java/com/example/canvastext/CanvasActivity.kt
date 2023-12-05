@@ -1,5 +1,6 @@
 package com.example.canvastext
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.graphics.RectF
@@ -47,6 +48,41 @@ class CanvasActivity : AppCompatActivity() {
     private val binding:ActivityCanvasBinding by lazy { ActivityCanvasBinding.inflate(layoutInflater) }
     private val formulaViewModel: FormulaViewModel by viewModels()
     private val serverRequestViewModel:ServerRequestViewModel by viewModels()
+    private val penSelectFragment:PenselectFragment? by lazy{
+        binding.penSelectFragmentContainer.getFragment<PenselectFragment?>()?.apply {
+            setOnToolSelectListener(object:PenselectFragment.ToolSelectListener{
+                override fun invokeHighlighter() {
+                    changeTool(Toolbar.Pen)
+                }
+
+                override fun invokePen() {
+                    changeTool(Toolbar.Pen)
+                    this@CanvasActivity.binding.toolbarPenButton.setImageResource(R.drawable.pen)
+                    this@CanvasActivity.binding.canvas.changePen()
+                }
+
+                override fun invokeEraser() {
+                    changeTool(Toolbar.Pen)
+                    this@CanvasActivity.binding.toolbarPenButton.setImageResource(R.drawable.eraser)
+                    this@CanvasActivity.binding.canvas.changeErase()
+                }
+
+            })
+
+            changeSelectedItem(1)
+
+            setOnPenSettingChangedListener(object: PenselectFragment.OnPenSettingChangedListener{
+                override fun invokeSliderMove(value: Int) {
+                    canvasViewModel.setPenWidth(value.toFloat())
+                }
+
+                override fun invokeColorChange(color: Int) {
+                    canvasViewModel.setPenColor(color)
+                }
+
+            })
+        }
+    }
 
     lateinit var buttons:ArrayList<ImageButton>
     private val canvasViewModel: CanvasViewModel by viewModels()
@@ -58,8 +94,6 @@ class CanvasActivity : AppCompatActivity() {
     private var canvasY = 0
 
     private fun changeTool(toolbar:Toolbar){
-
-        Log.d("toolbar log","change tool to ${toolbar.name}")
         for(i:Int in 0 until buttons.size){
             if(i == toolbar.id)
                 buttons[i].alpha = TOOLBAR_ACTIVATE_TRANSPARENCY
@@ -68,6 +102,7 @@ class CanvasActivity : AppCompatActivity() {
         }
         binding.canvas.changeTool(toolbar)
     }
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -79,17 +114,6 @@ class CanvasActivity : AppCompatActivity() {
         binding.ClearButton.setOnClickListener{
             binding.canvas.clearCanvas()
         }
-
-        binding.EraserButton.setOnClickListener {
-            binding.toolbarPenButton.setImageResource(R.drawable.eraser)
-            binding.canvas.changeErase()
-        }
-
-        binding.penButton.setOnClickListener {
-            binding.toolbarPenButton.setImageResource(R.drawable.pen)
-            binding.canvas.changePen()
-        }
-
 
         binding.canvas.setOnAreaAssignedListener(object : OnAreaAssignedListener {
             override fun invoke(area: RectF) {
@@ -161,6 +185,12 @@ class CanvasActivity : AppCompatActivity() {
         for(i:Int in 0 until buttons.size){
             buttons[i].setOnClickListener {
                 changeTool(Toolbar.values()[i])
+                if(Toolbar.values()[i]!= Toolbar.Pen){
+                    penSelectFragment?.setPentoolActive(false)
+                }
+                else{
+                    penSelectFragment?.setPentoolActive(true)
+                }
             }
         }
         binding.toolbarFunctionButton.setOnClickListener{
@@ -191,6 +221,15 @@ class CanvasActivity : AppCompatActivity() {
         binding.btnBack.setOnClickListener {
             finish()
         }
+
+        binding.canvas.setOnTouchListener { view, motionEvent ->
+            view.onTouchEvent(motionEvent)
+            if(motionEvent.action==MotionEvent.ACTION_DOWN){
+                penSelectFragment?.onOtherScreenSelected()
+            }
+            true
+        }
+
     }
 
     fun showFormulaFragment(){
@@ -226,6 +265,8 @@ class CanvasActivity : AppCompatActivity() {
             if(ev?.action == MotionEvent.ACTION_UP)
                 draggingImage = false
         }
+
+
         return super.dispatchTouchEvent(ev)
     }
 
@@ -250,9 +291,6 @@ class CanvasActivity : AppCompatActivity() {
     }
 
     private fun hideSystemUI() {
-        // Enables regular immersive mode.
-        // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
-        // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
             val controller = window.insetsController
 
@@ -263,12 +301,10 @@ class CanvasActivity : AppCompatActivity() {
         }
         else {
             window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE
-                    // Set the content to appear under the system bars so that the
-                    // content doesn't resize when the system bars hide and show.
                     or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                     or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                     or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    // Hide the nav bar and status bar
+
                     or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                     or View.SYSTEM_UI_FLAG_FULLSCREEN)
         }

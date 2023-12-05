@@ -2,42 +2,51 @@ package com.example.canvastext
 
 import android.animation.ArgbEvaluator
 import android.animation.TimeAnimator
-import android.animation.TimeInterpolator
 import android.annotation.SuppressLint
-import android.content.ContentValues.TAG
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Interpolator
 import android.os.Bundle
 import android.util.DisplayMetrics
-import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AccelerateInterpolator
 import android.view.animation.Animation
 import android.view.animation.Animation.AnimationListener
 import android.view.animation.AnimationUtils
-import android.view.animation.AnticipateInterpolator
-import android.view.animation.DecelerateInterpolator
+import android.widget.ImageButton
 import androidx.core.animation.doOnEnd
-import androidx.core.view.marginBottom
-import androidx.core.view.marginLeft
 import androidx.fragment.app.Fragment
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
 import com.example.canvastext.databinding.FragmentPenselectBinding
+import com.google.android.material.slider.Slider
+import com.google.android.material.slider.Slider.OnChangeListener
+import com.skydoves.colorpickerview.listeners.ColorListener
+import com.skydoves.colorpickerview.listeners.ColorPickerViewListener
 
 
 class PenselectFragment : Fragment() {
+    var selected:Int = -1
+    var kept:Int = 1
+
+    interface ToolSelectListener{
+        fun invokeHighlighter()
+        fun invokePen()
+        fun invokeEraser()
+    }
+
+    interface OnPenSettingChangedListener{
+        fun invokeSliderMove(value:Int)
+        fun invokeColorChange(color:Int)
+    }
 
     private var toolbarOpened = false
+    private var onToolSelectListener:ToolSelectListener? = null
+    private var onPenSettingChangedListener:OnPenSettingChangedListener? = null
 
     var binding:FragmentPenselectBinding? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
+    val tools by lazy{listOf(binding?.toolsHighlighterButton,binding?.toolsPenButton,binding?.toolsEraserButton)}
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -48,6 +57,7 @@ class PenselectFragment : Fragment() {
         return binding?.root
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding?.toolButton?.setOnClickListener {
@@ -55,9 +65,53 @@ class PenselectFragment : Fragment() {
                 clickToolButton()
             else
                 closeToolButton()}
+
+        for(i in tools.indices){
+            tools[i]?.setOnClickListener {
+                changeSelectedItem(i)
+                when(i){
+                    0-> onToolSelectListener?.invokeHighlighter()
+                    1-> onToolSelectListener?.invokePen()
+                    2-> onToolSelectListener?.invokeEraser()
+                }
+            }
+        }
+
+        binding?.widthSlider?.addOnChangeListener(object:OnChangeListener{
+            @SuppressLint("RestrictedApi")
+            override fun onValueChange(slider: Slider, value: Float, fromUser: Boolean) {
+                onPenSettingChangedListener?.invokeSliderMove(value.toInt())
+                binding?.penWidthIndicator?.text =value.toInt().toString()
+            }
+
+        })
+
+        binding?.colorPickerButton?.setOnClickListener {
+            if(binding?.colorPickerContainer?.visibility == View.INVISIBLE)
+                showColorPalette()
+            else
+                hideColorPalette()
+        }
+
+        binding?.colorPicker?.attachBrightnessSlider(binding?.brightnessSlideBar!!)
+        binding?.colorPicker?.setColorListener(object: ColorListener {
+            override fun onColorSelected(color: Int, fromUser: Boolean) {
+                binding?.colorPickerButton?.backgroundTintList = ColorStateList.valueOf(color)
+                onPenSettingChangedListener?.invokeColorChange(color)
+            }
+
+        })
+        binding?.colorPicker?.pureColor = Color.BLACK
+        binding?.brightnessSlideBar?.invalidate()
     }
 
-    fun hideSettingMenu(){
+    fun onOtherScreenSelected(){
+        closeToolButton()
+        hideSettingMenu()
+        hideColorPalette()
+    }
+
+    private fun hideSettingMenu(){
         if(binding == null)
             return
 
@@ -66,22 +120,15 @@ class PenselectFragment : Fragment() {
 
         val fadeAnimation =  AnimationUtils.loadAnimation(context, R.anim.formula_popout_animation)
         fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
-        fadeAnimation.setAnimationListener(object: Animation.AnimationListener {
-            override fun onAnimationStart(p0: Animation?) {
-            }
-
-            override fun onAnimationEnd(p0: Animation?) {
-                binding!!.penSettingMenu.visibility = View.INVISIBLE
-
-            }
-
-            override fun onAnimationRepeat(p0: Animation?) {
-            }
+        fadeAnimation.setAnimationListener(object: AnimationListener {
+            override fun onAnimationStart(p0: Animation?) {}
+            override fun onAnimationEnd(p0: Animation?) {binding!!.penSettingMenu.visibility = View.INVISIBLE}
+            override fun onAnimationRepeat(p0: Animation?) {}
         })
         binding!!.penSettingMenu.startAnimation(fadeAnimation)
     }
 
-    fun showSettingMenu(){
+    private fun showSettingMenu(){
         if(binding == null)
             return
 
@@ -94,13 +141,45 @@ class PenselectFragment : Fragment() {
         binding!!.penSettingMenu.startAnimation(fadeAnimation)
         binding!!.penSettingMenu.visibility = View.VISIBLE
     }
-    fun dp2px(dp: Float): Float {
+
+    private fun showColorPalette(){
+        if(binding == null)
+            return
+
+        if(binding!!.colorPickerContainer.visibility == View.VISIBLE)
+            return
+
+        binding!!.colorPickerContainer.isEnabled=true
+        val fadeAnimation =  AnimationUtils.loadAnimation(requireActivity(),R.anim.formula_popin_animation)
+        fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
+        binding!!.colorPickerContainer.startAnimation(fadeAnimation)
+        binding!!.colorPickerContainer.visibility = View.VISIBLE
+    }
+
+    private fun hideColorPalette(){
+        if(binding == null)
+            return
+
+        if(binding!!.colorPickerContainer.visibility == View.INVISIBLE)
+            return
+
+        val fadeAnimation =  AnimationUtils.loadAnimation(context, R.anim.formula_popout_animation)
+        fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
+        fadeAnimation.setAnimationListener(object: AnimationListener {
+            override fun onAnimationStart(p0: Animation?) {}
+            override fun onAnimationEnd(p0: Animation?) {binding!!.colorPickerContainer.visibility = View.INVISIBLE}
+            override fun onAnimationRepeat(p0: Animation?) {}
+        })
+        binding!!.colorPickerContainer.startAnimation(fadeAnimation)
+    }
+
+    private fun dp2px(dp: Float): Float {
         val resources = this.resources
         val metrics = resources.displayMetrics
         return dp * (metrics.densityDpi.toFloat() / DisplayMetrics.DENSITY_DEFAULT)
     }
 
-    fun clickToolButton(){
+    private fun clickToolButton(){
         if(binding?.toolButton == null)
             return
 
@@ -109,10 +188,10 @@ class PenselectFragment : Fragment() {
         val evaluator = ArgbEvaluator();
         val animator = TimeAnimator.ofFloat(0.0f,1.0f)
 
-        val dp30 = dp2px(30f)
+        val dp45 = dp2px(45f)
         val dp15 = dp2px(15f)
         val dp25 = dp2px(25f)
-        val dp50 = dp2px(50f)
+        val dp65 = dp2px(60f)
 
         animator.duration = 300
         animator.addUpdateListener {
@@ -124,8 +203,8 @@ class PenselectFragment : Fragment() {
 
             params.marginStart = (fraction * dp15 + (1-fraction) * dp25).toInt()
             params.bottomMargin = (fraction * dp15 + (1-fraction) * dp25).toInt()
-            params.width = (fraction * dp50 + (1-fraction) * dp30).toInt()
-            params.height = (fraction * dp50 + (1-fraction) * dp30).toInt()
+            params.width = (fraction * dp65 + (1-fraction) * dp45).toInt()
+            params.height = (fraction * dp65 + (1-fraction) * dp45).toInt()
 
             binding?.toolButton?.rotation = (1-fraction) * 45
             binding?.toolButton?.layoutParams = params
@@ -137,22 +216,25 @@ class PenselectFragment : Fragment() {
         toolBGAnimator()
     }
 
-    fun closeToolButton(){
+    private fun closeToolButton(){
         if(binding?.toolButton == null)
+            return
+
+        if(!toolbarOpened)
             return
 
         toolbarOpened = false
 
-        val evaluator = ArgbEvaluator();
-        val animator = TimeAnimator.ofFloat(0.0f,1.0f)
 
-        val dp30 = dp2px(30f)
+        val dp45 = dp2px(45f)
         val dp15 = dp2px(15f)
         val dp25 = dp2px(25f)
-        val dp50 = dp2px(50f)
+        val dp65 = dp2px(60f)
         val dp12 = dp2px(12f)
         val dp5 = dp2px(5f)
 
+        val evaluator = ArgbEvaluator()
+        val animator = TimeAnimator.ofFloat(0.0f,1.0f)
         animator.duration = 200
         animator.addUpdateListener {
             val fraction = 1-it.animatedFraction
@@ -163,8 +245,8 @@ class PenselectFragment : Fragment() {
 
             params.marginStart = (fraction * dp15 + (1-fraction) * dp25).toInt()
             params.bottomMargin = (fraction * dp15 + (1-fraction) * dp25).toInt()
-            params.width = (fraction * dp50 + (1-fraction) * dp30).toInt()
-            params.height = (fraction * dp50 + (1-fraction) * dp30).toInt()
+            params.width = (fraction * dp65 + (1-fraction) * dp45).toInt()
+            params.height = (fraction * dp65 + (1-fraction) * dp45).toInt()
 
             binding?.toolButton?.rotation = (1-fraction) * 45
             binding?.toolButton?.elevation = fraction * dp12 + (1-fraction) * dp5
@@ -176,48 +258,46 @@ class PenselectFragment : Fragment() {
         toolBGCloseAnimator()
     }
 
-    fun toolBGAnimator(){
+    private fun toolBGAnimator(){
         val animator = TimeAnimator.ofFloat(0.0f,1.0f)
 
-        val dp165 = dp2px(165f)
-        val dp40 = dp2px(40f)
+        val dp220 = dp2px(220f)
+        val dp60 = dp2px(60f)
 
         animator.duration = 300
         animator.addUpdateListener {
             val fraction = it.animatedFraction
             val params = binding?.toolButtonsBackground?.layoutParams as ViewGroup.MarginLayoutParams
 
-            params.width = ((dp40 * 0.6f) + fraction * dp40 * 0.4f).toInt()
-            params.height = (fraction * dp165).toInt()
+            params.width = ((dp60 * 0.6f) + fraction * dp60 * 0.4f).toInt()
+            params.height = (fraction * dp220).toInt()
             binding?.toolButtonsBackground?.layoutParams = params
         }
 
         animator.interpolator = EasingInterpolator(Ease.QUAD_OUT)
 
-        binding?.toolsEraserButton?.startAnimation(AnimationUtils.loadAnimation(context,R.anim.toollist_icon_expand_animation))
-        binding?.toolsEraserButton?.visibility = View.VISIBLE
-        binding?.toolsPenButton?.startAnimation(AnimationUtils.loadAnimation(context,R.anim.toollist_icon_expand_animation))
-        binding?.toolsPenButton?.visibility = View.VISIBLE
-        binding?.toolsHighlighterButton?.startAnimation(AnimationUtils.loadAnimation(context,R.anim.toollist_icon_expand_animation))
-        binding?.toolsHighlighterButton?.visibility = View.VISIBLE
+        for(tool in tools){
+            tool?.startAnimation(AnimationUtils.loadAnimation(context,R.anim.toollist_icon_expand_animation))
+            tool?.visibility = View.VISIBLE
+        }
 
         binding?.toolButtonsBackground?.visibility = View.VISIBLE
         animator.start()
     }
 
-    fun toolBGCloseAnimator(){
+    private fun toolBGCloseAnimator(){
         val animator = TimeAnimator.ofFloat(0.0f,1.0f)
 
-        val dp165 = dp2px(165f)
-        val dp40 = dp2px(40f)
+        val dp220 = dp2px(220f)
+        val dp60 = dp2px(60f)
 
         animator.duration = 150
         animator.addUpdateListener {
             val fraction = 1-it.animatedFraction
             val params = binding?.toolButtonsBackground?.layoutParams as ViewGroup.MarginLayoutParams
 
-            params.width = ((dp40 * 0.6f) + fraction * dp40 * 0.4f).toInt()
-            params.height = (fraction * dp165).toInt()
+            params.width = ((dp60 * 0.6f) + fraction * dp60 * 0.4f).toInt()
+            params.height = (fraction * dp220).toInt()
             binding?.toolButtonsBackground?.layoutParams = params
         }
 
@@ -226,11 +306,6 @@ class PenselectFragment : Fragment() {
         val anim = AnimationUtils.loadAnimation(context,R.anim.toollist_icon_shrink_animation)
         anim.interpolator = EasingInterpolator(Ease.QUART_OUT)
 
-
-        binding?.toolsEraserButton?.startAnimation(anim)
-
-
-        binding?.toolsPenButton?.startAnimation(anim)
         anim.setAnimationListener(object:AnimationListener{
             override fun onAnimationStart(p0: Animation?) {
             }
@@ -244,9 +319,81 @@ class PenselectFragment : Fragment() {
             override fun onAnimationRepeat(p0: Animation?) {
             }
         })
-        binding?.toolsHighlighterButton?.startAnimation(anim)
+
+        for(tool in tools){
+            tool?.startAnimation(anim)
+        }
 
         animator.doOnEnd { binding?.toolButtonsBackground?.visibility = View.INVISIBLE }
         animator.start()
     }
+
+    private fun startAnim(item:ImageButton?, isActive:Boolean, doAnimation:Boolean){
+        if(item==null)
+            return
+
+        val dp3 = dp2px(3f)
+        val dp2 = dp2px(2f)
+
+        if(doAnimation) {
+            val evaluator = ArgbEvaluator()
+            val animator = TimeAnimator.ofFloat(0.0f,1.0f)
+
+            animator.duration = 200
+            animator.addUpdateListener {
+                val fraction = if (isActive) it.animatedFraction else (1 - it.animatedFraction)
+                item.imageTintList = ColorStateList.valueOf(
+                    evaluator.evaluate(
+                        fraction,
+                        Color.parseColor("#000000"),
+                        Color.parseColor("#DDDDDD")
+                    ) as Int
+                )
+                item.backgroundTintList = ColorStateList.valueOf(
+                    evaluator.evaluate(
+                        fraction,
+                        Color.parseColor("#DDDDDD"),
+                        Color.parseColor("#524299")
+                    ) as Int
+                )
+
+                item.elevation = fraction * dp2 + (1 - fraction) * dp3
+            }
+            animator.start()
+        }
+        else{
+            item.imageTintList = ColorStateList.valueOf(if (!isActive) Color.parseColor("#000000") else Color.parseColor("#DDDDDD"))
+            item.backgroundTintList = ColorStateList.valueOf(if (!isActive) Color.parseColor("#DDDDDD") else Color.parseColor("#524299"))
+            item.elevation = if (isActive) dp2 else dp3
+        }
+    }
+
+    fun changeSelectedItem(item:Int){
+        if(selected == item)
+            return
+        if(selected!=-1)
+            startAnim(tools[selected],false, toolbarOpened)
+        if(item!=-1)
+            startAnim(tools[item],true, toolbarOpened)
+        selected = item
+        if(item!=-1)
+            kept = item
+    }
+
+    fun setPentoolActive(active:Boolean){
+        if(active)
+            changeSelectedItem(kept)
+        else{
+            changeSelectedItem(-1)
+        }
+    }
+
+    fun setOnToolSelectListener(listener:ToolSelectListener){
+        onToolSelectListener = listener
+    }
+
+    fun setOnPenSettingChangedListener(listener: OnPenSettingChangedListener){
+        onPenSettingChangedListener = listener
+    }
+
 }
