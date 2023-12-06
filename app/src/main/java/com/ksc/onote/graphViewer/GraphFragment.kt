@@ -1,4 +1,4 @@
-package com.example.canvastext.graphViewer
+package com.ksc.onote.graphViewer
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -17,11 +17,11 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
-import com.example.canvastext.OnImageCopiedListener
-import com.example.canvastext.R
-import com.example.canvastext.databinding.FragmentGraphBinding
-import com.example.canvastext.formulaViewer.FormulaViewModel
-import com.example.canvastext.formulaViewer.FormulaViewer
+import com.ksc.onote.OnImageCopiedListener
+import com.ksc.onote.R
+import com.ksc.onote.databinding.FragmentGraphBinding
+import com.ksc.onote.formulaViewer.FormulaViewModel
+import com.ksc.onote.formulaViewer.FormulaViewer
 import java.util.Base64
 
 
@@ -54,11 +54,10 @@ class GraphFragment : Fragment() {
         _onImageCopiedListener = listener
     }
 
-    @RequiresApi(Build.VERSION_CODES.S)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val formulaObserver = Observer<String> { value ->
-            binding?.graphDisplay?.setLatexCode(value)
+            binding?.graphDisplay?.setLatexCode(value,gridEnabled,axisEnabled)
         }
         viewModel.outputString.observe(viewLifecycleOwner, formulaObserver)
         binding?.closeButton?.setOnClickListener{
@@ -67,10 +66,12 @@ class GraphFragment : Fragment() {
 
         binding?.btn1?.setOnClickListener {
             gridEnabled = !gridEnabled
+            binding?.btn1?.alpha = if(gridEnabled) 1f else 0.4f
             binding?.graphDisplay?.setGrid(gridEnabled)
         }
         binding?.btn2?.setOnClickListener {
             axisEnabled = !axisEnabled
+            binding?.btn2?.alpha = if(axisEnabled) 1f else 0.4f
             binding?.graphDisplay?.setAxis(axisEnabled)
         }
 
@@ -89,7 +90,6 @@ class GraphFragment : Fragment() {
         })
     }
 
-    @RequiresApi(Build.VERSION_CODES.S)
     fun getGraphImage(): Bitmap?{
         return binding?.graphDisplay?.getGraphImage()
     }

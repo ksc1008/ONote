@@ -1,4 +1,4 @@
-package com.example.canvastext.formulaViewer
+package com.ksc.onote.formulaViewer
 
 import android.animation.ObjectAnimator
 import android.content.Context
@@ -15,7 +15,7 @@ import android.view.animation.AnimationUtils
 import androidx.core.graphics.get
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
-import com.example.canvastext.R
+import com.ksc.onote.R
 import katex.hourglass.`in`.mathlib.MathView
 import kotlin.math.max
 import kotlin.math.min
@@ -41,7 +41,7 @@ class FormulaViewer(ctx: Context?, attrs: AttributeSet?): MathView(ctx,attrs) {
         fun invokeLongTouch()
     }
 
-    private var longTouchListener:FormulaLongTouchListener? = null
+    private var longTouchListener: FormulaLongTouchListener? = null
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
 

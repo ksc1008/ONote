@@ -1,4 +1,4 @@
-package com.example.canvastext
+package com.ksc.onote
 
 import android.animation.ArgbEvaluator
 import android.animation.TimeAnimator
@@ -8,7 +8,6 @@ import android.graphics.Color
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
@@ -19,11 +18,10 @@ import androidx.core.animation.doOnEnd
 import androidx.fragment.app.Fragment
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
-import com.example.canvastext.databinding.FragmentPenselectBinding
+import com.ksc.onote.databinding.FragmentPenselectBinding
 import com.google.android.material.slider.Slider
 import com.google.android.material.slider.Slider.OnChangeListener
 import com.skydoves.colorpickerview.listeners.ColorListener
-import com.skydoves.colorpickerview.listeners.ColorPickerViewListener
 
 
 class PenselectFragment : Fragment() {
@@ -42,8 +40,8 @@ class PenselectFragment : Fragment() {
     }
 
     private var toolbarOpened = false
-    private var onToolSelectListener:ToolSelectListener? = null
-    private var onPenSettingChangedListener:OnPenSettingChangedListener? = null
+    private var onToolSelectListener: ToolSelectListener? = null
+    private var onPenSettingChangedListener: OnPenSettingChangedListener? = null
 
     var binding:FragmentPenselectBinding? = null
     val tools by lazy{listOf(binding?.toolsHighlighterButton,binding?.toolsPenButton,binding?.toolsEraserButton)}
@@ -388,7 +386,7 @@ class PenselectFragment : Fragment() {
         }
     }
 
-    fun setOnToolSelectListener(listener:ToolSelectListener){
+    fun setOnToolSelectListener(listener: ToolSelectListener){
         onToolSelectListener = listener
     }
 

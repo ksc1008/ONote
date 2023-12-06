@@ -1,8 +1,7 @@
-package com.example.canvastext.formulaViewer
+package com.ksc.onote.formulaViewer
 
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -15,10 +14,10 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
-import com.example.canvastext.OnImageCopiedListener
-import com.example.canvastext.R
-import com.example.canvastext.ServerRequestViewModel
-import com.example.canvastext.databinding.FragmentFormulaBinding
+import com.ksc.onote.OnImageCopiedListener
+import com.ksc.onote.R
+import com.ksc.onote.ServerRequestViewModel
+import com.ksc.onote.databinding.FragmentFormulaBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -102,7 +101,8 @@ class FormulaFragment : Fragment() {
             _onButtonClickedListener?.invokeButton3()
         }
 
-        binding?.formulaDisplay?.setLongTouchListener(object:FormulaViewer.FormulaLongTouchListener{
+        binding?.formulaDisplay?.setLongTouchListener(object:
+            FormulaViewer.FormulaLongTouchListener {
             override fun invokeTouchDown() {
             }
 

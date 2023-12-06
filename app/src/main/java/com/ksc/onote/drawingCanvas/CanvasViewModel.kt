@@ -1,4 +1,4 @@
-package com.example.canvastext.drawingCanvas
+package com.ksc.onote.drawingCanvas
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -6,7 +6,11 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.PorterDuff
+import androidx.core.graphics.blue
+import androidx.core.graphics.green
+import androidx.core.graphics.red
 import androidx.lifecycle.ViewModel
+import com.ksc.onote.MyCanvasView
 import java.util.LinkedList
 import kotlin.math.max
 import kotlin.math.min
@@ -17,15 +21,17 @@ class CanvasViewModel: ViewModel() {
     var height:Int = 0
 
     enum class DrawMod{PENDOWN, PENUP, RESET, IDLE, IMAGEDOWN, IMAGEUP}
-    var currentDrawMod:DrawMod = DrawMod.IDLE
+    var currentDrawMod: DrawMod = DrawMod.IDLE
+    var currentPentool:MyCanvasView.DrawingToolMod = MyCanvasView.DrawingToolMod.PEN
 
     private var bitmapCache: Bitmap
-    val piecewiseCanvas:PiecewiseCanvas = PiecewiseCanvas()
+    val piecewiseCanvas: PiecewiseCanvas = PiecewiseCanvas()
     private val strokeList: LinkedList<CanvasStroke> = LinkedList()
+    private val highlighterList: LinkedList<CanvasHighlighter> = LinkedList()
     private val bitmapList: LinkedList<CanvasBitmap> = LinkedList()
     private var _bitmap: Bitmap
     private var canvasTemp: Canvas
-    private var placingBitmap:CanvasBitmap? = null
+    private var placingBitmap: CanvasBitmap? = null
     private var _scaleFactor = 1f
 
     private var currentPenWidth:Float = 10f
@@ -100,7 +106,7 @@ class CanvasViewModel: ViewModel() {
             return list
         }
 
-        fun removePathPoint(p:CanvasStroke.StrokePoint){
+        fun removePathPoint(p: CanvasStroke.StrokePoint){
             val idx = getIndex(p.pX,p.pY)
             pathPoints[idx.second][idx.first].remove(p)
         }
@@ -122,12 +128,15 @@ class CanvasViewModel: ViewModel() {
         for(s in strokeList){
             s.removeStroke()
         }
+        for(h in highlighterList){
+            h.removeStroke()
+        }
         bitmapList.clear()
         strokeList.clear()
+        highlighterList.clear()
         currentDrawMod = DrawMod.RESET
     }
     fun addStroke(strokeX:Float, strokeY:Float){
-
         val strokePaint = Paint().apply {
             isAntiAlias = true
             isDither = true
@@ -137,24 +146,45 @@ class CanvasViewModel: ViewModel() {
             strokeWidth = currentPenWidth
             color = currentPenColor
         }
-
-        if(strokeX+viewPoint.x<0 || strokeX+viewPoint.x>=piecewiseCanvas.getWidth() || strokeY+viewPoint.y<0 || strokeY+viewPoint.y >= piecewiseCanvas.getHeight() )
+        if (strokeX + viewPoint.x < 0 || strokeX + viewPoint.x >= piecewiseCanvas.getWidth() || strokeY + viewPoint.y < 0 || strokeY + viewPoint.y >= piecewiseCanvas.getHeight())
             return
 
-        val s = CanvasStroke(strokeX+viewPoint.x,strokeY+viewPoint.y,piecewiseCanvas, strokePaint)
-        strokeList.add(s)
+        if(currentPentool == MyCanvasView.DrawingToolMod.PEN) {
+            val s = CanvasStroke(
+                strokeX + viewPoint.x,
+                strokeY + viewPoint.y,
+                piecewiseCanvas,
+                strokePaint
+            )
+            strokeList.add(s)
+        }
+        else{
+            strokePaint.strokeWidth = strokePaint.strokeWidth * 5
+            strokePaint.strokeCap = Paint.Cap.BUTT
+            strokePaint.strokeJoin = Paint.Join.MITER
+            strokePaint.color = Color.argb(100,currentPenColor.red,currentPenColor.green,currentPenColor.blue)
+            val s = CanvasHighlighter(
+                strokeX + viewPoint.x,
+                strokeY + viewPoint.y,
+                piecewiseCanvas,
+                strokePaint
+            )
+            highlighterList.add(s)
+        }
 
         currentDrawMod = DrawMod.PENDOWN
     }
 
 
     fun appendStroke(strokeX:Float, strokeY:Float){
-        if(strokeList.isNotEmpty())
-            strokeList.last().appendStroke(strokeX + viewPoint.x,strokeY + viewPoint.y)
-    }
-
-    fun removeCanvasStroke(s:CanvasStroke){
-        strokeList.remove(s)
+        if(currentPentool == MyCanvasView.DrawingToolMod.PEN) {
+            if (strokeList.isNotEmpty())
+                strokeList.last().appendStroke(strokeX + viewPoint.x, strokeY + viewPoint.y)
+        }
+        else{
+            if (highlighterList.isNotEmpty())
+                highlighterList.last().appendStroke(strokeX + viewPoint.x, strokeY + viewPoint.y)
+        }
     }
 
     fun eraseCircle(radius:Float, eraseX:Float, eraseY:Float){
@@ -179,7 +209,10 @@ class CanvasViewModel: ViewModel() {
                     val stroke = st.path
                     if(!stroke.removed){
                         stroke.removeStroke()
-                        strokeList.remove(stroke)
+                        if(stroke is CanvasHighlighter)
+                            highlighterList.remove(stroke)
+                        else
+                            strokeList.remove(stroke)
                     }
                     erased = true
                 }
@@ -209,14 +242,21 @@ class CanvasViewModel: ViewModel() {
         currentDrawMod = DrawMod.IMAGEUP
     }
 
+    fun drawCurrentPen(canvas:Canvas?){
+        if(currentPentool==MyCanvasView.DrawingToolMod.PEN)
+            strokeList.lastOrNull()?.draw(canvas)
+        else
+            highlighterList.lastOrNull()?.draw(canvas)
+    }
+
     fun drawAll(canvas: Canvas?){
         if(canvas == null)
             return
 
         canvas.drawColor(Color.LTGRAY)
         canvas.save()
-        canvas.translate(-viewPoint.x,-viewPoint.y)
         canvas.scale(_scaleFactor,_scaleFactor)
+        canvas.translate(-viewPoint.x,-viewPoint.y)
         canvas.drawBitmap(piecewiseCanvas.bgBitmap,0f,0f, null)
 
         canvasTemp.density = canvas.density
@@ -224,13 +264,19 @@ class CanvasViewModel: ViewModel() {
 
         when(currentDrawMod){
             DrawMod.PENDOWN -> {
+                if(currentPentool==MyCanvasView.DrawingToolMod.HIGHLIGHTER)
+                    highlighterList.lastOrNull()?.draw(canvas)
                 canvas.drawBitmap(bitmapCache, 0f, 0f, null)
-                strokeList.lastOrNull()?.draw(canvas)
+                if(currentPentool==MyCanvasView.DrawingToolMod.PEN)
+                    strokeList.lastOrNull()?.draw(canvas)
             }
             DrawMod.PENUP -> {
                 canvasTemp.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+                if(currentPentool==MyCanvasView.DrawingToolMod.HIGHLIGHTER)
+                    highlighterList.lastOrNull()?.draw(canvasTemp)
                 canvasTemp.drawBitmap(bitmapCache, 0f, 0f, null)
-                strokeList.lastOrNull()?.draw(canvasTemp)
+                if(currentPentool==MyCanvasView.DrawingToolMod.PEN)
+                    strokeList.lastOrNull()?.draw(canvasTemp)
 
                 //canvas.setBitmap(bitmapCache)
                 bitmapCache = _bitmap.copy(_bitmap.config,false)
@@ -241,6 +287,9 @@ class CanvasViewModel: ViewModel() {
             DrawMod.RESET -> {
                 canvasTemp.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
+                for (highlight in highlighterList) {
+                    highlight.draw(canvasTemp)
+                }
                 for (stroke in strokeList) {
                     stroke.draw(canvasTemp)
                 }

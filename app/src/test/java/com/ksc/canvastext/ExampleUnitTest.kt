@@ -1,4 +1,4 @@
-package com.example.canvastext
+package com.ksc.canvastext
 
 import org.junit.Test
 

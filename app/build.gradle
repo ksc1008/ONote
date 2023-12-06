@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.canvastext'
+    namespace 'com.ksc.onote'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.canvastext"
+        applicationId 'com.ksc.onote'
         minSdk 26
         targetSdkVersion 33
         versionCode 1

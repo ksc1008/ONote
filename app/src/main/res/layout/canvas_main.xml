@@ -28,7 +28,7 @@
         android:layout_marginBottom="72dp"
         android:layout_marginTop="72dp">
 
-        <com.example.canvastext.MyCanvasView
+        <com.ksc.onote.MyCanvasView
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 

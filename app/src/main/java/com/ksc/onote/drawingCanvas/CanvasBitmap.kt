@@ -1,4 +1,4 @@
-package com.example.canvastext.drawingCanvas
+package com.ksc.onote.drawingCanvas
 
 import android.graphics.Bitmap
 import android.graphics.Canvas

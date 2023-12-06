@@ -1,34 +1,27 @@
-package com.example.canvastext
+package com.ksc.onote
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.graphics.Rect
 import android.graphics.RectF
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import android.view.ScaleGestureDetector.OnScaleGestureListener
 import android.view.ScaleGestureDetector.SimpleOnScaleGestureListener
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
-import android.webkit.WebView
 import android.widget.ImageButton
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintSet.Motion
-import androidx.core.view.marginLeft
-import androidx.core.view.marginTop
-import com.example.canvastext.databinding.ActivityCanvasBinding
-import com.example.canvastext.drawingCanvas.CanvasViewModel
-import com.example.canvastext.formulaViewer.FormulaFragment
-import com.example.canvastext.formulaViewer.FormulaViewModel
-import com.example.canvastext.graphViewer.GraphFragment
+import com.ksc.onote.databinding.ActivityCanvasBinding
+import com.ksc.onote.drawingCanvas.CanvasViewModel
+import com.ksc.onote.formulaViewer.FormulaFragment
+import com.ksc.onote.formulaViewer.FormulaViewModel
+import com.ksc.onote.graphViewer.GraphFragment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -47,23 +40,26 @@ class CanvasActivity : AppCompatActivity() {
 
     private val binding:ActivityCanvasBinding by lazy { ActivityCanvasBinding.inflate(layoutInflater) }
     private val formulaViewModel: FormulaViewModel by viewModels()
-    private val serverRequestViewModel:ServerRequestViewModel by viewModels()
-    private val penSelectFragment:PenselectFragment? by lazy{
+    private val serverRequestViewModel: ServerRequestViewModel by viewModels()
+    private val penSelectFragment: PenselectFragment? by lazy{
         binding.penSelectFragmentContainer.getFragment<PenselectFragment?>()?.apply {
-            setOnToolSelectListener(object:PenselectFragment.ToolSelectListener{
+            setOnToolSelectListener(object:
+                PenselectFragment.ToolSelectListener {
                 override fun invokeHighlighter() {
                     changeTool(Toolbar.Pen)
+                    this@CanvasActivity.binding.toolbarPenButton.setImageResource(R.drawable.highlighter2)
+                    this@CanvasActivity.binding.canvas.changeHighlighter()
                 }
 
                 override fun invokePen() {
                     changeTool(Toolbar.Pen)
-                    this@CanvasActivity.binding.toolbarPenButton.setImageResource(R.drawable.pen)
+                    this@CanvasActivity.binding.toolbarPenButton.setImageResource(R.drawable.pen2)
                     this@CanvasActivity.binding.canvas.changePen()
                 }
 
                 override fun invokeEraser() {
                     changeTool(Toolbar.Pen)
-                    this@CanvasActivity.binding.toolbarPenButton.setImageResource(R.drawable.eraser)
+                    this@CanvasActivity.binding.toolbarPenButton.setImageResource(R.drawable.eraser2)
                     this@CanvasActivity.binding.canvas.changeErase()
                 }
 
@@ -71,7 +67,8 @@ class CanvasActivity : AppCompatActivity() {
 
             changeSelectedItem(1)
 
-            setOnPenSettingChangedListener(object: PenselectFragment.OnPenSettingChangedListener{
+            setOnPenSettingChangedListener(object:
+                PenselectFragment.OnPenSettingChangedListener {
                 override fun invokeSliderMove(value: Int) {
                     canvasViewModel.setPenWidth(value.toFloat())
                 }
@@ -93,7 +90,7 @@ class CanvasActivity : AppCompatActivity() {
     private var canvasX = 0
     private var canvasY = 0
 
-    private fun changeTool(toolbar:Toolbar){
+    private fun changeTool(toolbar: Toolbar){
         for(i:Int in 0 until buttons.size){
             if(i == toolbar.id)
                 buttons[i].alpha = TOOLBAR_ACTIVATE_TRANSPARENCY
@@ -115,7 +112,8 @@ class CanvasActivity : AppCompatActivity() {
             binding.canvas.clearCanvas()
         }
 
-        binding.canvas.setOnAreaAssignedListener(object : OnAreaAssignedListener {
+        binding.canvas.setOnAreaAssignedListener(object :
+            OnAreaAssignedListener {
             override fun invoke(area: RectF) {
                 if(abs(area.height() * area.width()) > 10)
                     showFormulaFragment()
@@ -131,7 +129,8 @@ class CanvasActivity : AppCompatActivity() {
 
         supportFragmentManager.beginTransaction()
             .add(binding.formulaFragmentContainer.id, FormulaFragment().apply {
-                setOnImageCopiedListener(object: OnImageCopiedListener{
+                setOnImageCopiedListener(object:
+                    OnImageCopiedListener {
                     override fun invoke() {
                         val img = getFormulaImage()
                         if(img != null) {
@@ -164,7 +163,8 @@ class CanvasActivity : AppCompatActivity() {
 
         supportFragmentManager.beginTransaction()
             .add(binding.graphFragmentContainer.id, GraphFragment().apply {
-                setOnImageCopiedListener(object: OnImageCopiedListener{
+                setOnImageCopiedListener(object:
+                    OnImageCopiedListener {
                     @RequiresApi(Build.VERSION_CODES.S)
                     override fun invoke() {
                         val img = getGraphImage()
@@ -207,7 +207,7 @@ class CanvasActivity : AppCompatActivity() {
         scaleDetector = ScaleGestureDetector(this, object: SimpleOnScaleGestureListener() {
             override fun onScale(p0: ScaleGestureDetector): Boolean {
                 Log.d("scale Event:","${p0.scaleFactor}")
-                //binding.canvas.scaleEvent(p0.scaleFactor)
+                binding.canvas.scaleEvent(p0.scaleFactor)
                 return true
             }
         })

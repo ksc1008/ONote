@@ -1,4 +1,4 @@
-package com.example.canvastext.formulaViewer
+package com.ksc.onote.formulaViewer
 
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.LiveData

@@ -1,4 +1,4 @@
-package com.example.canvastext
+package com.ksc.canvastext
 
 import androidx.test.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.example.canvastext", appContext.packageName)
+        assertEquals("com.ksc.onote", appContext.packageName)
     }
 }

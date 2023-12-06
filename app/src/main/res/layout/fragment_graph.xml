@@ -6,7 +6,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".graphViewer.GraphFragment">
 
-    <com.example.canvastext.graphViewer.GraphView
+    <com.ksc.onote.graphViewer.GraphView
         android:id="@+id/graphDisplay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

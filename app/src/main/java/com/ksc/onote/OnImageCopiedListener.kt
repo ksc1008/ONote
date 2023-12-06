@@ -1,4 +1,4 @@
-package com.example.canvastext
+package com.ksc.onote
 
 interface OnImageCopiedListener {
     fun invoke()

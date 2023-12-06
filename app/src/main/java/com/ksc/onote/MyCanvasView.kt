@@ -1,6 +1,5 @@
-package com.example.canvastext
+package com.ksc.onote
 
-import android.content.ContentValues.TAG
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -14,11 +13,7 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
-import androidx.annotation.RequiresApi
-import androidx.core.view.ViewCompat
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStoreOwner
-import com.example.canvastext.drawingCanvas.CanvasViewModel
+import com.ksc.onote.drawingCanvas.CanvasViewModel
 
 interface OnAreaAssignedListener{
     fun invoke(area: RectF)
@@ -27,12 +22,12 @@ interface OnAreaAssignedListener{
 class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     lateinit var canvas:CanvasViewModel
 
-    enum class DrawingToolMod{PEN, ERASER, IMAGE}
+    enum class DrawingToolMod{PEN, ERASER, IMAGE, HIGHLIGHTER}
 
     private var _tempBitmap:Bitmap? = null
     private var placingImage:Boolean = false
-    private var currentDrawingTool:DrawingToolMod = DrawingToolMod.PEN
-    private var _onAreaAssignedListener:OnAreaAssignedListener? = null
+    private var currentDrawingTool: DrawingToolMod = DrawingToolMod.PEN
+    private var _onAreaAssignedListener: OnAreaAssignedListener? = null
     var currentTool: CanvasActivity.Toolbar = CanvasActivity.Toolbar.Pen
     private var isPenDown = false
     private var penX:Float = 0f
@@ -42,7 +37,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     private var imagePlaceOffsetY = 0f
     var exclusionRects = listOf(Rect(0,top,10,bottom),Rect(10,top,20,bottom),Rect(20,top,30,bottom),Rect(40,top,50,bottom),Rect(50,top,60,bottom),Rect(60,top,70,bottom))
 
-    fun setOnAreaAssignedListener(listener:OnAreaAssignedListener){
+    fun setOnAreaAssignedListener(listener: OnAreaAssignedListener){
         _onAreaAssignedListener = listener
     }
 
@@ -61,10 +56,17 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
 
     fun changeErase(){
         currentDrawingTool = DrawingToolMod.ERASER
+        canvas.currentPentool = DrawingToolMod.ERASER
     }
 
     fun changePen(){
         currentDrawingTool= DrawingToolMod.PEN
+        canvas.currentPentool = DrawingToolMod.PEN
+    }
+
+    fun changeHighlighter(){
+        currentDrawingTool= DrawingToolMod.HIGHLIGHTER
+        canvas.currentPentool = DrawingToolMod.HIGHLIGHTER
     }
 
     fun changeTool(tool: CanvasActivity.Toolbar){
@@ -82,7 +84,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         when (currentTool){
             CanvasActivity.Toolbar.Pen -> penEvent(event)
             CanvasActivity.Toolbar.Rectangle -> rectangleEvent(event)
-            CanvasActivity.Toolbar.Hand-> handEvent(event)
+            CanvasActivity.Toolbar.Hand -> handEvent(event)
         }
 
         return true
@@ -127,6 +129,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
                         canvas.startPlaceImage(_tempBitmap?: Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888),penX + imagePlaceOffsetX, penY + imagePlaceOffsetY)
                         //_tempBitmap = null
                     }
+                    DrawingToolMod.HIGHLIGHTER -> canvas.addStroke(penX, penY)
                 }
             }
 
@@ -134,11 +137,12 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
                 isPenDown = false
                 when(currentDrawingTool){
                     DrawingToolMod.PEN -> canvas.saveToBitmap()
-                    DrawingToolMod.ERASER->{}
-                    DrawingToolMod.IMAGE->{
+                    DrawingToolMod.ERASER ->{}
+                    DrawingToolMod.IMAGE ->{
                         canvas.placeImage()
                         changePen()
                     }
+                    DrawingToolMod.HIGHLIGHTER -> canvas.saveToBitmap()
                 }
             }
 
@@ -147,6 +151,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
                     DrawingToolMod.PEN -> canvas.appendStroke(penX, penY)
                     DrawingToolMod.ERASER -> canvas.eraseCircle(20f, event.x, event.y)
                     DrawingToolMod.IMAGE -> canvas.movePlacingImage(penX + imagePlaceOffsetX,penY + imagePlaceOffsetY)
+                    DrawingToolMod.HIGHLIGHTER -> canvas.appendStroke(penX, penY)
                 }
             }
         }
@@ -167,10 +172,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         _tempBitmap = bitmap
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onDraw(canvas: Canvas?) {
-        //ViewCompat.setSystemGestureExclusionRects(this,exclusionRects)
-        //Log.d(TAG,"(${exclusionRects[0].left},${exclusionRects[0].top}),(${exclusionRects[0].right},${exclusionRects[0].bottom})")
         this.canvas.drawAll(canvas)
         if(currentTool == CanvasActivity.Toolbar.Rectangle){
             this.canvas.rectangleArea.drawRectangle(canvas)
@@ -204,11 +206,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         return super.onApplyWindowInsets(insets)
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        //systemGestureExclusionRects=exclusionRects
-        //ViewCompat.setSystemGestureExclusionRects(this,exclusionRects)
-        //Log.d(TAG,"(${exclusionRects[0].left},${exclusionRects[0].top}),(${exclusionRects[0].right},${exclusionRects[0].bottom})")
         super.onLayout(changed, left, top, right, bottom)
     }
 

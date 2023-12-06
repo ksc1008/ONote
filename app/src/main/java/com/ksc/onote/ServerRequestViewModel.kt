@@ -1,4 +1,4 @@
-package com.example.canvastext
+package com.ksc.onote
 
 import android.graphics.Bitmap
 import android.util.Log
@@ -42,7 +42,8 @@ class ServerRequestViewModel: ViewModel() {
 
         val request = encodeImage(image)
 
-        NetworkManager.getInstance()?.somePostRequestReturningString(request,object:NetworkGetListener<String?>{
+        NetworkManager.getInstance()
+            ?.somePostRequestReturningString(request,object: NetworkGetListener<String?> {
             override fun getResult(`object`: String?) {
                 if(`object`==null){
                     success = false
@@ -59,15 +60,5 @@ class ServerRequestViewModel: ViewModel() {
             delay(100L)
         }
         return Pair(response,success)
-    }
-
-    suspend fun getGraphFromServer(function: String):Bitmap{
-        delay(500L)
-        return Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888)
-    }
-
-    suspend fun getCalculateResultFromServer(formula: List<String>):List<String>{
-        delay(500L)
-        return listOf()
     }
 }

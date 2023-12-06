@@ -14,7 +14,7 @@
         android:layout_marginBottom="20dp"
         android:layout_marginTop="20dp">
 
-        <com.example.canvastext.MyCanvasView
+        <com.ksc.onote.MyCanvasView
             android:id="@+id/canvas"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -116,15 +116,20 @@
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/formulaFragmentContainer"
         android:clickable="true"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:layout_marginHorizontal="30dp"
+        android:layout_width="0dp"
+        app:layout_constraintDimensionRatio="1.8"
+
+        android:layout_height="0dp"
+        app:layout_constraintHeight_max="200dp"
+        app:layout_constraintHeight_percent="0.4"
         android:elevation="12dp"
         android:background="@drawable/round_fragment_box"
         android:layout_marginBottom="60dp"
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        />
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/penSelectFragmentContainer"
@@ -134,7 +139,7 @@
         android:clickable="false"
         android:background="#00000000"
         app:layout_constraintLeft_toLeftOf="parent"
-        android:name="com.example.canvastext.PenselectFragment"
+        android:name="com.ksc.onote.PenselectFragment"
         />
 
     <androidx.fragment.app.FragmentContainerView

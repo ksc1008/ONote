@@ -1,4 +1,4 @@
-package com.example.canvastext.graphViewer
+package com.ksc.onote.graphViewer
 
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
@@ -10,7 +10,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PointF
-import android.os.Build
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
@@ -19,18 +18,16 @@ import android.view.animation.AnimationUtils
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebView
-import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.core.view.doOnPreDraw
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
-import com.example.canvastext.R
-import com.example.canvastext.formulaViewer.FormulaViewer
+import com.ksc.onote.R
+import com.ksc.onote.formulaViewer.FormulaViewer
 import java.lang.Exception
 import java.util.Base64
 import kotlin.math.abs
 
-@RequiresApi(Build.VERSION_CODES.S)
+
 class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
 
     var latex:String = ""
@@ -42,7 +39,6 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
 
 
     fun stringToBitmap(encoded:String):Bitmap?{
-        Log.d(TAG,"encoding... ${encoded.split('\"')[1].substring("data:image/png;base64,".length)}")
         return try {
             val decoder = Base64.getDecoder()
             val encodeByte: ByteArray = decoder.decode(encoded.split('\"')[1].substring("data:image/png;base64,".length))
@@ -53,7 +49,7 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
         }
     }
 
-    private fun getHtml(latex:String):String{
+    private fun getHtml(latex:String, grid:Boolean = true, axis:Boolean = true):String{
         val html = "<!DOCTYPE html>\n" +
                 "<html>\n" +
                 "<head>\n" +
@@ -90,6 +86,8 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
                 "            calculator = Desmos.GraphingCalculator(elt,options);\n" +
                 "            calculator.setExpression({id:1, latex:latex});\n" +
                 "        calculator.updateSettings({\n" +
+                "        showGrid:${if(grid) "true" else "false"},\n "+
+                "        showXAxis:${if(axis) "true" else "false"}, showYAxis:${if(axis) "true" else "false"},\n"+
                 "            expressionsCollapsed: true,\n" +
                 "            autosize:false\n" +
                 "        });"+
@@ -103,8 +101,8 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
         return html
     }
 
-    private fun loadData(){
-        this.loadDataWithBaseURL("null",getHtml(latex),"text/html","UTF-8","about:blank")
+    private fun loadData(grid: Boolean= true, axis: Boolean=true){
+        this.loadDataWithBaseURL("null",getHtml(latex,grid,axis),"text/html","UTF-8","about:blank")
     }
 
     fun setGrid(enable:Boolean){
@@ -114,13 +112,12 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
     fun setAxis(enable:Boolean){
         loadUrl("javascript:calculator.updateSettings({showXAxis:${if(enable) "true" else "false"}, showYAxis:${if(enable) "true" else "false"}})")
     }
-    fun setLatexCode(latex:String){
+    fun setLatexCode(latex:String,grid: Boolean = true, axis: Boolean = true){
         this.latex = latex.replace("\\","\\\\")
-        loadData()
+        loadData(grid,axis)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    @RequiresApi(Build.VERSION_CODES.S)
     private fun configurationSettingWebView(enable_zoom_in_controls: Boolean) {
         settings.javaScriptEnabled = true
         settings.allowFileAccess = true
@@ -142,7 +139,6 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
         isContextClickable = true
         isClickable = true
 
-        Log.d(TAG, "Webview:${getCurrentWebViewPackage()?.applicationInfo?.compileSdkVersion}")
 
         webChromeClient = object: WebChromeClient() {
             override fun onConsoleMessage(cm: ConsoleMessage?): Boolean {
@@ -199,7 +195,7 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
             }
 
             MotionEvent.ACTION_MOVE->{
-                if( keepTouching && (abs(event.x-longTouchPoint.x) + abs(event.x-longTouchPoint.y)) > 10){
+                if( keepTouching && ((abs(event.x-longTouchPoint.x) + abs(event.y-longTouchPoint.y))) > 100){
                     longTouchListener?.invokeTouchUp()
                     cancelLongTouch()
                 }
@@ -234,14 +230,6 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
     }
 
     fun getGraphImage(): Bitmap {
-        //val bit: Bitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888,true)
-        //val canvas:Canvas = Canvas(bit)
-
-        //val origin = background
-        //background = ColorDrawable(Color.TRANSPARENT)
-
-        //draw(canvas)
-        //background = origin
         if(screenshot == null){
             return Bitmap.createBitmap(1,1,Bitmap.Config.ARGB_8888)
         }
@@ -249,11 +237,6 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
             Bitmap.createScaledBitmap(screenshot!!,width,height,true)
             return Bitmap.createScaledBitmap(screenshot!!,width,height,true)
         }
-    }
-
-    override fun onDraw(canvas: Canvas?) {
-        val paint = Paint()
-        super.onDraw(canvas)
     }
 
     init {
@@ -264,7 +247,6 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
 
     fun screenshot(){
         evaluateJavascript("calculator.screenshot({targetPixelRatio: 2});"){
-
             Log.d(TAG,it)
             screenshot = stringToBitmap(it)
         }

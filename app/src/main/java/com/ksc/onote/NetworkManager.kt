@@ -1,4 +1,4 @@
-package com.example.canvastext
+package com.ksc.onote
 
 import android.content.Context
 import android.util.Log
