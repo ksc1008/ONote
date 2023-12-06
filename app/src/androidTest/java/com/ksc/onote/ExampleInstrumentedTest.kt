@@ -1,4 +1,4 @@
-package com.ksc.canvastext
+package com.ksc.onote
 
 import androidx.test.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

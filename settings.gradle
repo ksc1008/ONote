@@ -17,7 +17,7 @@ dependencyResolutionManagement {
         maven { url 'https://maven.fabric.io/public' }
     }
 }
-rootProject.name = "CanvasText"
+rootProject.name = "ONote"
 include ':app'
 
 

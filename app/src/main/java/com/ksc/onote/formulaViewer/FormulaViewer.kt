@@ -16,6 +16,7 @@ import androidx.core.graphics.get
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
 import com.ksc.onote.R
+import com.ksc.onote.utils.DisplayTool
 import katex.hourglass.`in`.mathlib.MathView
 import kotlin.math.max
 import kotlin.math.min
@@ -168,6 +169,10 @@ class FormulaViewer(ctx: Context?, attrs: AttributeSet?): MathView(ctx,attrs) {
         layoutParams = layoutParams
         alternativeDraw = false
         super.setDisplayText(formulaText)
+    }
+
+    fun setDisplaySizeDp(dp:Float){
+        setTextSize(DisplayTool.dp2px(dp,context).toInt())
     }
 
     fun getFormulaImage():Bitmap{

@@ -1,4 +1,4 @@
-package com.ksc.onote
+package com.ksc.onote.canvasViewUI
 
 import android.animation.ArgbEvaluator
 import android.animation.TimeAnimator
@@ -6,7 +6,6 @@ import android.annotation.SuppressLint
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
-import android.util.DisplayMetrics
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,12 +14,15 @@ import android.view.animation.Animation.AnimationListener
 import android.view.animation.AnimationUtils
 import android.widget.ImageButton
 import androidx.core.animation.doOnEnd
+import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
 import com.ksc.onote.databinding.FragmentPenselectBinding
+import com.ksc.onote.utils.DisplayTool
 import com.google.android.material.slider.Slider
 import com.google.android.material.slider.Slider.OnChangeListener
+import com.ksc.onote.R
 import com.skydoves.colorpickerview.listeners.ColorListener
 
 
@@ -134,7 +136,9 @@ class PenselectFragment : Fragment() {
             return
 
         binding!!.penSettingMenu.isEnabled=true
-        val fadeAnimation =  AnimationUtils.loadAnimation(requireActivity(),R.anim.formula_popin_animation)
+        val fadeAnimation =  AnimationUtils.loadAnimation(requireActivity(),
+            R.anim.formula_popin_animation
+        )
         fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
         binding!!.penSettingMenu.startAnimation(fadeAnimation)
         binding!!.penSettingMenu.visibility = View.VISIBLE
@@ -148,7 +152,9 @@ class PenselectFragment : Fragment() {
             return
 
         binding!!.colorPickerContainer.isEnabled=true
-        val fadeAnimation =  AnimationUtils.loadAnimation(requireActivity(),R.anim.formula_popin_animation)
+        val fadeAnimation =  AnimationUtils.loadAnimation(requireActivity(),
+            R.anim.formula_popin_animation
+        )
         fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
         binding!!.colorPickerContainer.startAnimation(fadeAnimation)
         binding!!.colorPickerContainer.visibility = View.VISIBLE
@@ -171,11 +177,6 @@ class PenselectFragment : Fragment() {
         binding!!.colorPickerContainer.startAnimation(fadeAnimation)
     }
 
-    private fun dp2px(dp: Float): Float {
-        val resources = this.resources
-        val metrics = resources.displayMetrics
-        return dp * (metrics.densityDpi.toFloat() / DisplayMetrics.DENSITY_DEFAULT)
-    }
 
     private fun clickToolButton(){
         if(binding?.toolButton == null)
@@ -186,10 +187,10 @@ class PenselectFragment : Fragment() {
         val evaluator = ArgbEvaluator();
         val animator = TimeAnimator.ofFloat(0.0f,1.0f)
 
-        val dp45 = dp2px(45f)
-        val dp15 = dp2px(15f)
-        val dp25 = dp2px(25f)
-        val dp65 = dp2px(60f)
+        val dp45 = DisplayTool.dp2px(45f,this.requireContext())
+        val dp15 = DisplayTool.dp2px(15f,this.requireContext())
+        val dp25 = DisplayTool.dp2px(25f,this.requireContext())
+        val dp65 = DisplayTool.dp2px(60f,this.requireContext())
 
         animator.duration = 300
         animator.addUpdateListener {
@@ -224,12 +225,12 @@ class PenselectFragment : Fragment() {
         toolbarOpened = false
 
 
-        val dp45 = dp2px(45f)
-        val dp15 = dp2px(15f)
-        val dp25 = dp2px(25f)
-        val dp65 = dp2px(60f)
-        val dp12 = dp2px(12f)
-        val dp5 = dp2px(5f)
+        val dp45 = DisplayTool.dp2px(45f,requireContext())
+        val dp15 = DisplayTool.dp2px(15f,requireContext())
+        val dp25 = DisplayTool.dp2px(25f,requireContext())
+        val dp65 = DisplayTool.dp2px(60f,requireContext())
+        val dp12 = DisplayTool.dp2px(12f,requireContext())
+        val dp5 = DisplayTool.dp2px(5f,requireContext())
 
         val evaluator = ArgbEvaluator()
         val animator = TimeAnimator.ofFloat(0.0f,1.0f)
@@ -259,8 +260,8 @@ class PenselectFragment : Fragment() {
     private fun toolBGAnimator(){
         val animator = TimeAnimator.ofFloat(0.0f,1.0f)
 
-        val dp220 = dp2px(220f)
-        val dp60 = dp2px(60f)
+        val dp220 = DisplayTool.dp2px(220f,requireContext())
+        val dp60 = DisplayTool.dp2px(60f,requireContext())
 
         animator.duration = 300
         animator.addUpdateListener {
@@ -275,7 +276,9 @@ class PenselectFragment : Fragment() {
         animator.interpolator = EasingInterpolator(Ease.QUAD_OUT)
 
         for(tool in tools){
-            tool?.startAnimation(AnimationUtils.loadAnimation(context,R.anim.toollist_icon_expand_animation))
+            tool?.startAnimation(AnimationUtils.loadAnimation(context,
+                R.anim.toollist_icon_expand_animation
+            ))
             tool?.visibility = View.VISIBLE
         }
 
@@ -286,8 +289,8 @@ class PenselectFragment : Fragment() {
     private fun toolBGCloseAnimator(){
         val animator = TimeAnimator.ofFloat(0.0f,1.0f)
 
-        val dp220 = dp2px(220f)
-        val dp60 = dp2px(60f)
+        val dp220 = DisplayTool.dp2px(220f,requireContext())
+        val dp60 = DisplayTool.dp2px(60f,requireContext())
 
         animator.duration = 150
         animator.addUpdateListener {
@@ -301,7 +304,7 @@ class PenselectFragment : Fragment() {
 
         animator.interpolator = EasingInterpolator(Ease.QUART_OUT)
 
-        val anim = AnimationUtils.loadAnimation(context,R.anim.toollist_icon_shrink_animation)
+        val anim = AnimationUtils.loadAnimation(context, R.anim.toollist_icon_shrink_animation)
         anim.interpolator = EasingInterpolator(Ease.QUART_OUT)
 
         anim.setAnimationListener(object:AnimationListener{
@@ -330,8 +333,8 @@ class PenselectFragment : Fragment() {
         if(item==null)
             return
 
-        val dp3 = dp2px(3f)
-        val dp2 = dp2px(2f)
+        val dp3 = DisplayTool.dp2px(3f,requireContext())
+        val dp2 = DisplayTool.dp2px(2f,requireContext())
 
         if(doAnimation) {
             val evaluator = ArgbEvaluator()
@@ -351,7 +354,7 @@ class PenselectFragment : Fragment() {
                     evaluator.evaluate(
                         fraction,
                         Color.parseColor("#DDDDDD"),
-                        Color.parseColor("#524299")
+                        ResourcesCompat.getColor(resources,R.color.kscPurple,null)
                     ) as Int
                 )
 
@@ -361,7 +364,7 @@ class PenselectFragment : Fragment() {
         }
         else{
             item.imageTintList = ColorStateList.valueOf(if (!isActive) Color.parseColor("#000000") else Color.parseColor("#DDDDDD"))
-            item.backgroundTintList = ColorStateList.valueOf(if (!isActive) Color.parseColor("#DDDDDD") else Color.parseColor("#524299"))
+            item.backgroundTintList = ColorStateList.valueOf(if (!isActive) Color.parseColor("#DDDDDD") else ResourcesCompat.getColor(resources,R.color.kscPurple,null))
             item.elevation = if (isActive) dp2 else dp3
         }
     }

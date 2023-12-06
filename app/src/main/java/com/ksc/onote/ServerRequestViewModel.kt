@@ -43,7 +43,7 @@ class ServerRequestViewModel: ViewModel() {
         val request = encodeImage(image)
 
         NetworkManager.getInstance()
-            ?.somePostRequestReturningString(request,object: NetworkGetListener<String?> {
+            ?.postRequestOcrServer(request,object: NetworkGetListener<String?> {
             override fun getResult(`object`: String?) {
                 if(`object`==null){
                     success = false

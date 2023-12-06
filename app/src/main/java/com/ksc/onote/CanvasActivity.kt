@@ -17,6 +17,8 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import com.ksc.onote.canvasViewUI.OnAreaAssignedListener
+import com.ksc.onote.canvasViewUI.PenselectFragment
 import com.ksc.onote.databinding.ActivityCanvasBinding
 import com.ksc.onote.drawingCanvas.CanvasViewModel
 import com.ksc.onote.formulaViewer.FormulaFragment

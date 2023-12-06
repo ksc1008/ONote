@@ -51,7 +51,6 @@ class FormulaFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        WebView.enableSlowWholeDocumentDraw()
         binding = FragmentFormulaBinding.inflate(layoutInflater)
         return binding?.root
     }
@@ -64,7 +63,6 @@ class FormulaFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WebView.enableSlowWholeDocumentDraw()
     }
 
     fun setOnViewDestroyedListener(listener: OnViewDestroyedListener){
@@ -87,7 +85,6 @@ class FormulaFragment : Fragment() {
         }
         viewModel.outputString.observe(viewLifecycleOwner, formulaObserver)
         binding?.closeButton?.setOnClickListener{
-            //close()
             hide()
         }
 
@@ -116,6 +113,7 @@ class FormulaFragment : Fragment() {
 
         })
         viewModel.setFormula("y=x^2 +3 x+1")
+        binding?.formulaDisplay?.setDisplaySizeDp(8f)
     }
 
     private fun close(){

@@ -10,7 +10,7 @@ import androidx.core.graphics.blue
 import androidx.core.graphics.green
 import androidx.core.graphics.red
 import androidx.lifecycle.ViewModel
-import com.ksc.onote.MyCanvasView
+import com.ksc.onote.canvasViewUI.MyCanvasView
 import java.util.LinkedList
 import kotlin.math.max
 import kotlin.math.min
@@ -22,7 +22,7 @@ class CanvasViewModel: ViewModel() {
 
     enum class DrawMod{PENDOWN, PENUP, RESET, IDLE, IMAGEDOWN, IMAGEUP}
     var currentDrawMod: DrawMod = DrawMod.IDLE
-    var currentPentool:MyCanvasView.DrawingToolMod = MyCanvasView.DrawingToolMod.PEN
+    var currentPentool: MyCanvasView.DrawingToolMod = MyCanvasView.DrawingToolMod.PEN
 
     private var bitmapCache: Bitmap
     val piecewiseCanvas: PiecewiseCanvas = PiecewiseCanvas()
@@ -243,7 +243,7 @@ class CanvasViewModel: ViewModel() {
     }
 
     fun drawCurrentPen(canvas:Canvas?){
-        if(currentPentool==MyCanvasView.DrawingToolMod.PEN)
+        if(currentPentool== MyCanvasView.DrawingToolMod.PEN)
             strokeList.lastOrNull()?.draw(canvas)
         else
             highlighterList.lastOrNull()?.draw(canvas)
@@ -264,18 +264,18 @@ class CanvasViewModel: ViewModel() {
 
         when(currentDrawMod){
             DrawMod.PENDOWN -> {
-                if(currentPentool==MyCanvasView.DrawingToolMod.HIGHLIGHTER)
+                if(currentPentool== MyCanvasView.DrawingToolMod.HIGHLIGHTER)
                     highlighterList.lastOrNull()?.draw(canvas)
                 canvas.drawBitmap(bitmapCache, 0f, 0f, null)
-                if(currentPentool==MyCanvasView.DrawingToolMod.PEN)
+                if(currentPentool== MyCanvasView.DrawingToolMod.PEN)
                     strokeList.lastOrNull()?.draw(canvas)
             }
             DrawMod.PENUP -> {
                 canvasTemp.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-                if(currentPentool==MyCanvasView.DrawingToolMod.HIGHLIGHTER)
+                if(currentPentool== MyCanvasView.DrawingToolMod.HIGHLIGHTER)
                     highlighterList.lastOrNull()?.draw(canvasTemp)
                 canvasTemp.drawBitmap(bitmapCache, 0f, 0f, null)
-                if(currentPentool==MyCanvasView.DrawingToolMod.PEN)
+                if(currentPentool== MyCanvasView.DrawingToolMod.PEN)
                     strokeList.lastOrNull()?.draw(canvasTemp)
 
                 //canvas.setBitmap(bitmapCache)

@@ -20,7 +20,7 @@ class NetworkManager private constructor(context: Context) {
         requestQueue = Volley.newRequestQueue(context.applicationContext)
     }
 
-    fun somePostRequestReturningString(param1: Any?, listener: NetworkGetListener<String?>) {
+    fun postRequestOcrServer(param1: Any?, listener: NetworkGetListener<String?>) {
         val url = prefixURL + "api/mathpix"
         val jsonParams: MutableMap<String?, Any?> = HashMap()
         jsonParams["img"] = param1
@@ -49,12 +49,12 @@ class NetworkManager private constructor(context: Context) {
         requestQueue.add(request)
     }
 
-    fun postRequestToMathPix(param1: Any?, listener: NetworkGetListener<String?>) {
-        val url = prefixURL2 + "v3/text"
+    fun getAccessToken(authCode: String, listener: NetworkGetListener<String?>) {
+        val url = prefixURL2 + "redirect"
         val jsonParams: MutableMap<String?, Any?> = HashMap()
-        jsonParams["src"] = "data:image/jpeg;base64, $param1"
+        jsonParams["response"] = authCode
         val request = JsonObjectRequest(
-            Request.Method.POST, url, JSONObject(jsonParams),
+            Request.Method.GET, url+"?code=$authCode", JSONObject(jsonParams),
             { response ->
                 Log.d(
                     "$TAG: ",
@@ -78,7 +78,7 @@ class NetworkManager private constructor(context: Context) {
         private const val TAG = "NetworkManager"
         private var instance: NetworkManager? = null
         private const val prefixURL = "https://noteapp.k-paas.org/"
-        private const val prefixURL2 = "https://api.mathpix.com/"
+        private const val prefixURL2 = "https://testnote.k-paas.org/"
         @Synchronized
         fun getInstance(context: Context): NetworkManager? {
             if (instance == null) instance = NetworkManager(context)

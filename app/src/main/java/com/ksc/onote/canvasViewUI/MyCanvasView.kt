@@ -1,4 +1,4 @@
-package com.ksc.onote
+package com.ksc.onote.canvasViewUI
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -7,12 +7,12 @@ import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.Rect
 import android.graphics.RectF
-import android.os.Build
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
+import com.ksc.onote.CanvasActivity
 import com.ksc.onote.drawingCanvas.CanvasViewModel
 
 interface OnAreaAssignedListener{

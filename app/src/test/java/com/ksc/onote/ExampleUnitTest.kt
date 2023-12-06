@@ -1,4 +1,4 @@
-package com.ksc.canvastext
+package com.ksc.onote
 
 import org.junit.Test
 
