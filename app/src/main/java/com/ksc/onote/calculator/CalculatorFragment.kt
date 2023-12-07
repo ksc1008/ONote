@@ -1,17 +1,14 @@
-package com.ksc.onote.graphViewer
+package com.ksc.onote.formulaViewer
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.os.Build
 import android.os.Bundle
+import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.webkit.WebView
-import androidx.annotation.RequiresApi
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
@@ -19,35 +16,55 @@ import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
 import com.ksc.onote.OnImageCopiedListener
 import com.ksc.onote.R
-import com.ksc.onote.databinding.FragmentGraphBinding
-import com.ksc.onote.formulaViewer.FormulaViewModel
-import com.ksc.onote.formulaViewer.FormulaViewer
-import java.util.Base64
+import com.ksc.onote.ServerRequestViewModel
+import com.ksc.onote.databinding.FragmentCalculatorBinding
+import com.ksc.onote.databinding.FragmentFormulaBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
+class CalculatorFragment : Fragment() {
 
-class GraphFragment : Fragment() {
-    private var axisEnabled = true
-    private var gridEnabled = true
+    interface OnViewDestroyedListener{
+        fun invoke()
+    }
+
+    interface OnBtnClickedListener{
+        fun invoke()
+    }
 
     private val viewModel: FormulaViewModel by activityViewModels()
     private val viewInActivity: FragmentContainerView by lazy{
-        requireActivity().findViewById(R.id.graphFragmentContainer)
+        requireActivity().findViewById(R.id.calculationFragmentContainer)
     }
 
+    private var binding:FragmentCalculatorBinding? = null
+
+    private var _onButtonClickedListener: OnBtnClickedListener? = null
+
+    private var _onViewDestroyedListener: OnViewDestroyedListener? = null
     private var _onImageCopiedListener: OnImageCopiedListener? = null
-    private var binding: FragmentGraphBinding? = null
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        WebView.enableSlowWholeDocumentDraw()
-    }
-
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        binding = FragmentGraphBinding.inflate(layoutInflater)
+        binding = FragmentCalculatorBinding.inflate(layoutInflater)
         return binding?.root
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _onViewDestroyedListener?.invoke()
+        binding = null
+    }
+
+    fun setOnViewDestroyedListener(listener: OnViewDestroyedListener){
+        _onViewDestroyedListener = listener
+    }
+
+    fun setOnButtonClickedListener(listener: OnBtnClickedListener){
+        _onButtonClickedListener = listener
     }
 
     fun setOnImageCopiedListener(listener: OnImageCopiedListener){
@@ -56,26 +73,21 @@ class GraphFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         val formulaObserver = Observer<String> { value ->
-            binding?.graphDisplay?.setLatexCode(value,gridEnabled,axisEnabled)
+            binding?.formulaDisplay?.setDisplayText("$$ = $value $$")
         }
-        viewModel.outputString.observe(viewLifecycleOwner, formulaObserver)
+        viewModel.calculationResult.observe(viewLifecycleOwner, formulaObserver)
         binding?.closeButton?.setOnClickListener{
             hide()
         }
 
-        binding?.btn1?.setOnClickListener {
-            gridEnabled = !gridEnabled
-            binding?.btn1?.alpha = if(gridEnabled) 1f else 0.4f
-            binding?.graphDisplay?.setGrid(gridEnabled)
-        }
-        binding?.btn2?.setOnClickListener {
-            axisEnabled = !axisEnabled
-            binding?.btn2?.alpha = if(axisEnabled) 1f else 0.4f
-            binding?.graphDisplay?.setAxis(axisEnabled)
+        binding?.btn1?.setOnClickListener{
+            _onButtonClickedListener?.invoke()
         }
 
-        binding?.graphDisplay?.setLongTouchListener(object: FormulaViewer.FormulaLongTouchListener{
+        binding?.formulaDisplay?.setLongTouchListener(object:
+            FormulaViewer.FormulaLongTouchListener {
             override fun invokeTouchDown() {
             }
 
@@ -88,27 +100,31 @@ class GraphFragment : Fragment() {
             }
 
         })
+        binding?.formulaDisplay?.setDisplaySizeDp(8f)
     }
 
-    fun getGraphImage(): Bitmap?{
-        return binding?.graphDisplay?.getGraphImage()
+    fun getFormulaImage():Bitmap?{
+        return binding?.formulaDisplay?.getFormulaImage()
     }
 
-    fun hide(instant:Boolean=false){
+    fun hide(instant:Boolean = false){
         if(viewInActivity.visibility == View.INVISIBLE)
             return
 
+        viewInActivity.isEnabled = false
+        binding?.formulaDisplay?.isEnabled=false
         val fadeAnimation =  AnimationUtils.loadAnimation(context, R.anim.formula_popout_animation)
-        if(instant)
-            fadeAnimation.duration=1
         fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
+
+        if(instant)
+            fadeAnimation.duration = 1
+
         fadeAnimation.setAnimationListener(object: Animation.AnimationListener {
             override fun onAnimationStart(p0: Animation?) {
             }
 
             override fun onAnimationEnd(p0: Animation?) {
                 viewInActivity.visibility = View.INVISIBLE
-
             }
 
             override fun onAnimationRepeat(p0: Animation?) {
@@ -122,11 +138,14 @@ class GraphFragment : Fragment() {
         if(viewInActivity.visibility != View.INVISIBLE)
             return
 
-        binding?.graphDisplay?.isEnabled=true
+        binding?.formulaDisplay?.isEnabled=true
+        binding?.formulaDisplay?.reset()
         val fadeAnimation =  AnimationUtils.loadAnimation(requireActivity(),R.anim.formula_popin_animation)
         fadeAnimation.interpolator = EasingInterpolator(Ease.QUAD_OUT)
+
         if(instant)
             fadeAnimation.duration = 1
+
         viewInActivity.startAnimation(fadeAnimation)
         viewInActivity.visibility = View.VISIBLE
         viewInActivity.isEnabled = true

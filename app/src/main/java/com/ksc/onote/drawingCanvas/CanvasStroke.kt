@@ -37,6 +37,16 @@ open class CanvasStroke(private var x:Float, private var y:Float, private val co
         container.addPoint(sp)
     }
 
+    fun getPathPointsData():List<StrokePointData>{
+        val l:MutableList<StrokePointData> = mutableListOf()
+        for(p in pathPoints){
+            if(p.includeDrawing){
+                l.add(StrokePointData(p.pX,p.pX))
+            }
+        }
+        return l
+    }
+
     private fun addDividedPathPoint(sp: StrokePoint){
         val DIVIDE_LEN = 100
         if(pathPoints.isNotEmpty()){
@@ -76,5 +86,11 @@ open class CanvasStroke(private var x:Float, private var y:Float, private val co
         //    viewCanvas?.drawCircle(p.pX.toFloat(),p.pY.toFloat(),3f,paint)
         //}
         viewCanvas?.drawPath(path,paint)
+    }
+
+    companion object{
+        fun serialize(canvasStroke:CanvasStroke):StrokeData{
+            return StrokeData(canvasStroke.paint.strokeWidth,canvasStroke.paint.color,canvasStroke.getPathPointsData())
+        }
     }
 }

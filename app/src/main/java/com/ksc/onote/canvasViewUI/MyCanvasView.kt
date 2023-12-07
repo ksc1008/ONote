@@ -190,7 +190,8 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     }
 
     fun scaleEvent(scaleFactorMultiplier:Float){
-        canvas.setScaleFactor(canvas.getScaleFactor() * scaleFactorMultiplier)
+        if(currentTool == CanvasActivity.Toolbar.Hand)
+            canvas.setScaleFactor(canvas.getScaleFactor() * scaleFactorMultiplier)
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {

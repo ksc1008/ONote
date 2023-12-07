@@ -42,4 +42,10 @@ class CanvasHighlighter(private var x:Float, private var y:Float, private val co
             }
         }
     }
+
+    companion object{
+        fun serialize(canvasStroke:CanvasHighlighter):StrokeData{
+            return StrokeData(canvasStroke.paint.strokeWidth,canvasStroke.paint.color,canvasStroke.getPathPointsData())
+        }
+    }
 }

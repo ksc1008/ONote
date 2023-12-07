@@ -23,16 +23,16 @@ import kotlin.math.min
 
 class FormulaViewer(ctx: Context?, attrs: AttributeSet?): MathView(ctx,attrs) {
     var keepTouching:Boolean = false
-    var popAnimation:Animation? = null
-    val elevationAnimator:ObjectAnimator = ObjectAnimator.ofFloat(this,"elevation",10f)
+    private var popAnimation:Animation? = null
+    private val elevationAnimator:ObjectAnimator = ObjectAnimator.ofFloat(this,"elevation",10f)
 
-    var alternativeDraw:Boolean = false
-    var cachedBitmap:Bitmap? = null
+    private var alternativeDraw:Boolean = false
+    private var cachedBitmap:Bitmap? = null
 
-    val originalWidth by lazy{
+    private val originalWidth by lazy{
         layoutParams.width
     }
-    val originalHeight by lazy{
+    private val originalHeight by lazy{
         layoutParams.height
     }
 

@@ -137,6 +137,10 @@ class CanvasViewModel: ViewModel() {
         currentDrawMod = DrawMod.RESET
     }
     fun addStroke(strokeX:Float, strokeY:Float){
+        val adjustX = strokeX / _scaleFactor + viewPoint.x
+        val adjustY = strokeY / _scaleFactor + viewPoint.y
+
+
         val strokePaint = Paint().apply {
             isAntiAlias = true
             isDither = true
@@ -146,13 +150,13 @@ class CanvasViewModel: ViewModel() {
             strokeWidth = currentPenWidth
             color = currentPenColor
         }
-        if (strokeX + viewPoint.x < 0 || strokeX + viewPoint.x >= piecewiseCanvas.getWidth() || strokeY + viewPoint.y < 0 || strokeY + viewPoint.y >= piecewiseCanvas.getHeight())
+        if (adjustX < 0 || adjustX >= piecewiseCanvas.getWidth() || adjustY < 0 || adjustY >= piecewiseCanvas.getHeight())
             return
 
         if(currentPentool == MyCanvasView.DrawingToolMod.PEN) {
             val s = CanvasStroke(
-                strokeX + viewPoint.x,
-                strokeY + viewPoint.y,
+                adjustX,
+                adjustY,
                 piecewiseCanvas,
                 strokePaint
             )
@@ -164,8 +168,8 @@ class CanvasViewModel: ViewModel() {
             strokePaint.strokeJoin = Paint.Join.MITER
             strokePaint.color = Color.argb(100,currentPenColor.red,currentPenColor.green,currentPenColor.blue)
             val s = CanvasHighlighter(
-                strokeX + viewPoint.x,
-                strokeY + viewPoint.y,
+                adjustX,
+                adjustY,
                 piecewiseCanvas,
                 strokePaint
             )
@@ -177,13 +181,15 @@ class CanvasViewModel: ViewModel() {
 
 
     fun appendStroke(strokeX:Float, strokeY:Float){
+        val adjustX = strokeX / _scaleFactor + viewPoint.x
+        val adjustY = strokeY / _scaleFactor + viewPoint.y
         if(currentPentool == MyCanvasView.DrawingToolMod.PEN) {
             if (strokeList.isNotEmpty())
-                strokeList.last().appendStroke(strokeX + viewPoint.x, strokeY + viewPoint.y)
+                strokeList.last().appendStroke(adjustX, adjustY)
         }
         else{
             if (highlighterList.isNotEmpty())
-                highlighterList.last().appendStroke(strokeX + viewPoint.x, strokeY + viewPoint.y)
+                highlighterList.last().appendStroke(adjustX, adjustY)
         }
     }
 
@@ -343,7 +349,7 @@ class CanvasViewModel: ViewModel() {
     fun moveView(newPivot:PointF){
         val d = PointF(handMovePoint.x-newPivot.x,handMovePoint.y-newPivot.y)
         handMovePoint = newPivot
-        viewPoint = PointF(viewPoint.x + d.x, viewPoint.y + d.y)
+        viewPoint = PointF(viewPoint.x + d.x / _scaleFactor, viewPoint.y + d.y / _scaleFactor)
     }
 
     fun setPenWidth(width:Float){

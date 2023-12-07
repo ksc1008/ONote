@@ -17,10 +17,12 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import com.ksc.onote.calculator.CalculatorViewModel
 import com.ksc.onote.canvasViewUI.OnAreaAssignedListener
 import com.ksc.onote.canvasViewUI.PenselectFragment
 import com.ksc.onote.databinding.ActivityCanvasBinding
 import com.ksc.onote.drawingCanvas.CanvasViewModel
+import com.ksc.onote.formulaViewer.CalculatorFragment
 import com.ksc.onote.formulaViewer.FormulaFragment
 import com.ksc.onote.formulaViewer.FormulaViewModel
 import com.ksc.onote.graphViewer.GraphFragment
@@ -43,6 +45,7 @@ class CanvasActivity : AppCompatActivity() {
     private val binding:ActivityCanvasBinding by lazy { ActivityCanvasBinding.inflate(layoutInflater) }
     private val formulaViewModel: FormulaViewModel by viewModels()
     private val serverRequestViewModel: ServerRequestViewModel by viewModels()
+    private val calculatorViewModel:CalculatorViewModel by viewModels()
     private val penSelectFragment: PenselectFragment? by lazy{
         binding.penSelectFragmentContainer.getFragment<PenselectFragment?>()?.apply {
             setOnToolSelectListener(object:
@@ -130,40 +133,6 @@ class CanvasActivity : AppCompatActivity() {
         }
 
         supportFragmentManager.beginTransaction()
-            .add(binding.formulaFragmentContainer.id, FormulaFragment().apply {
-                setOnImageCopiedListener(object:
-                    OnImageCopiedListener {
-                    override fun invoke() {
-                        val img = getFormulaImage()
-                        if(img != null) {
-                            Log.d("Capture Log", "(${img.width},${img.height})")
-                            binding.canvas.addBitmapToCanvas(img)
-                            changeTool(Toolbar.Pen)
-                            binding.canvas.dispatchTouchEvent(MotionEvent.obtain(0,0, MotionEvent.ACTION_DOWN,
-                                lastPointerX-canvasX,lastPointerY-canvasY,0))
-                            draggingImage = true
-
-                        }
-                        binding.graphFragmentContainer.getFragment<GraphFragment?>()?.hide()
-                    }
-                })
-
-                setOnButtonClickedListener(object: FormulaFragment.OnBtnClickedListener{
-                    override fun invokeButton1() {
-                    }
-
-                    override fun invokeButton2() {
-                        binding.graphFragmentContainer.getFragment<GraphFragment?>()?.show()
-                    }
-
-                    override fun invokeButton3() {
-                    }
-
-                })
-            }).commit()
-
-
-        supportFragmentManager.beginTransaction()
             .add(binding.graphFragmentContainer.id, GraphFragment().apply {
                 setOnImageCopiedListener(object:
                     OnImageCopiedListener {
@@ -180,9 +149,69 @@ class CanvasActivity : AppCompatActivity() {
 
                         }
                         binding.formulaFragmentContainer.getFragment<FormulaFragment?>()?.hide()
+                        binding.calculationFragmentContainer.getFragment<CalculatorFragment?>()?.hide()
                     }
                 })
-            }).commit()
+            })
+            .add(binding.formulaFragmentContainer.id, FormulaFragment().apply {
+                setOnImageCopiedListener(object:
+                    OnImageCopiedListener {
+                    override fun invoke() {
+                        val img = getFormulaImage()
+                        if(img != null) {
+                            Log.d("Capture Log", "(${img.width},${img.height})")
+                            binding.canvas.addBitmapToCanvas(img)
+                            changeTool(Toolbar.Pen)
+                            binding.canvas.dispatchTouchEvent(MotionEvent.obtain(0,0, MotionEvent.ACTION_DOWN,
+                                lastPointerX-canvasX,lastPointerY-canvasY,0))
+                            draggingImage = true
+
+                        }
+                        binding.graphFragmentContainer.getFragment<GraphFragment?>()?.hide()
+                        binding.calculationFragmentContainer.getFragment<CalculatorFragment?>()?.hide()
+                    }
+                })
+
+                setOnButtonClickedListener(object: FormulaFragment.OnBtnClickedListener{
+                    override fun invokeButton1() {
+                    }
+
+                    override fun invokeButton2() {
+                        showGraph()
+                    }
+
+                    override fun invokeButton3() {
+                        if(formulaViewModel.isCalculated())
+                            showCalculation()
+                    }
+
+                })
+            })
+            .add(binding.calculationFragmentContainer.id, CalculatorFragment().apply {
+                setOnImageCopiedListener(object:
+                    OnImageCopiedListener {
+                    override fun invoke() {
+                        val img = getFormulaImage()
+                        if(img != null) {
+                            Log.d("Capture Log", "(${img.width},${img.height})")
+                            binding.canvas.addBitmapToCanvas(img)
+                            changeTool(Toolbar.Pen)
+                            binding.canvas.dispatchTouchEvent(MotionEvent.obtain(0,0, MotionEvent.ACTION_DOWN,
+                                lastPointerX-canvasX,lastPointerY-canvasY,0))
+                            draggingImage = true
+
+                        }
+                        binding.graphFragmentContainer.getFragment<GraphFragment?>()?.hide()
+                        binding.formulaFragmentContainer.getFragment<FormulaFragment?>()?.hide()
+                    }
+                })
+
+                setOnButtonClickedListener(object: CalculatorFragment.OnBtnClickedListener{
+                    override fun invoke() {
+                    }
+                })
+            })
+            .commit()
 
         for(i:Int in 0 until buttons.size){
             buttons[i].setOnClickListener {
@@ -208,7 +237,6 @@ class CanvasActivity : AppCompatActivity() {
 
         scaleDetector = ScaleGestureDetector(this, object: SimpleOnScaleGestureListener() {
             override fun onScale(p0: ScaleGestureDetector): Boolean {
-                Log.d("scale Event:","${p0.scaleFactor}")
                 binding.canvas.scaleEvent(p0.scaleFactor)
                 return true
             }
@@ -232,6 +260,37 @@ class CanvasActivity : AppCompatActivity() {
             true
         }
 
+        calculatorViewModel.runAgent(this)
+
+        calculatorViewModel.calculate("\\\\sqrt{2}")
+
+        calculatorViewModel.bridge.setOnResultListener(object: CalculatorViewModel.OnCalculationResult{
+            override fun invokeSuccess(result: String) {
+                updateCalculation(result)
+            }
+
+            override fun invokeFail() {
+                Log.d("Calculation Complete:","error")
+            }
+
+        })
+    }
+
+    fun updateCalculation(result: String){
+        scope.launch(Dispatchers.Main) {
+            Log.d("Calculation Complete:",result)
+            formulaViewModel.setCalculation(result)
+        }
+    }
+
+    fun showGraph(){
+        binding.calculationFragmentContainer.getFragment<CalculatorFragment?>()?.hide(true)
+        binding.graphFragmentContainer.getFragment<GraphFragment?>()?.show()
+    }
+
+    fun showCalculation(){
+        binding.calculationFragmentContainer.getFragment<CalculatorFragment?>()?.show()
+        binding.graphFragmentContainer.getFragment<GraphFragment?>()?.hide(true)
     }
 
     fun showFormulaFragment(){
@@ -244,6 +303,8 @@ class CanvasActivity : AppCompatActivity() {
         if(!formulaViewModel.hasFormula())
             return
         binding.formulaFragmentContainer.getFragment<FormulaFragment?>()?.show()
+
+        calculatorViewModel.calculate("\\\\sqrt{2}")
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
@@ -281,6 +342,7 @@ class CanvasActivity : AppCompatActivity() {
 
             if(result.second) {
                 formulaViewModel.setFormula(result.first)
+                calculatorViewModel.calculate(result.first)
                 popInFormula()
                 changeTool(Toolbar.Hand)
             }
