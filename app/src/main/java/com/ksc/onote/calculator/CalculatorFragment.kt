@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
-import android.webkit.WebView
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
@@ -16,12 +15,7 @@ import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
 import com.ksc.onote.OnImageCopiedListener
 import com.ksc.onote.R
-import com.ksc.onote.ServerRequestViewModel
 import com.ksc.onote.databinding.FragmentCalculatorBinding
-import com.ksc.onote.databinding.FragmentFormulaBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 class CalculatorFragment : Fragment() {
 
@@ -74,10 +68,12 @@ class CalculatorFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val formulaObserver = Observer<String> { value ->
+        val calculationResultObserver = Observer<String> { value ->
             binding?.formulaDisplay?.setDisplayText("$$ = $value $$")
         }
-        viewModel.calculationResult.observe(viewLifecycleOwner, formulaObserver)
+
+
+        viewModel.calculationResult.observe(viewLifecycleOwner, calculationResultObserver)
         binding?.closeButton?.setOnClickListener{
             hide()
         }

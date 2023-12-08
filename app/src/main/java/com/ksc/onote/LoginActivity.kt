@@ -1,6 +1,7 @@
 package com.ksc.onote
 
 import android.content.ContentValues.TAG
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -10,6 +11,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.ksc.onote.authorization.AuthorizeManager
 import com.ksc.onote.databinding.ActivityLoginBinding
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -56,6 +58,8 @@ class LoginActivity : ComponentActivity() {
         binding.loginButton.setOnClickListener {
             requestGoogleLogin()
         }
+
+        AuthorizeManager.getInstance(this)
     }
 
     private fun getGoogleClient(): GoogleSignInClient {
@@ -75,9 +79,17 @@ class LoginActivity : ComponentActivity() {
 
     private fun getAccessToken(autoToken:String):String{
         GlobalScope.launch {
-            NetworkManager.getInstance(baseContext)?.getAccessToken(autoToken, listener = object:NetworkGetListener<String?>{
-                override fun getResult(`object`: String?) {
+            NetworkManager.getInstance(baseContext)?.getAccessToken(autoToken, listener = object:NetworkGetListener<Boolean>{
+                override fun getResult(`object`: Boolean) {
                     Log.d(TAG,"Result : $`object`")
+                    if(`object`){
+                        val switchActivityIntent = Intent(this@LoginActivity, MainActivity::class.java)
+                        startActivity(switchActivityIntent)
+                        finish()
+                    }
+                }
+
+                override fun getError(message: String) {
                 }
 
             })

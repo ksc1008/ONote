@@ -6,10 +6,12 @@ import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import com.ksc.onote.authorization.AuthorizeManager
 import org.json.JSONObject
 
 interface NetworkGetListener<T> {
     fun getResult(`object`: T)
+    fun getError(message:String)
 }
 
 class NetworkManager private constructor(context: Context) {
@@ -21,9 +23,16 @@ class NetworkManager private constructor(context: Context) {
     }
 
     fun postRequestOcrServer(param1: Any?, listener: NetworkGetListener<String?>) {
-        val url = prefixURL + "api/mathpix"
+        val url = ocrURL + "api/mathpix"
         val jsonParams: MutableMap<String?, Any?> = HashMap()
+        val key = AuthorizeManager.getInstance()?.getAccessToken()
+        if(key==null){
+            listener.getResult(null)
+            return
+        }
+
         jsonParams["img"] = param1
+        jsonParams["access_token"] = key
         val request = JsonObjectRequest(
             Request.Method.POST, url, JSONObject(jsonParams),
             { response:JSONObject ->
@@ -31,10 +40,12 @@ class NetworkManager private constructor(context: Context) {
                     "$TAG: ",
                     "somePostRequest Response : $response"
                 )
-                if(response.has("latex_styled"))
-                    listener.getResult(response.getString("latex_styled"))
+                if(checkResponseSuccess(response)){
+                    listener.getResult(response.getJSONObject("response").getString("img"))
+                    AuthorizeManager.getInstance()?.setAccessToken(response.getString("access_token"))
+                }
                 else{
-                    listener.getResult("")
+                    listener.getError("Error")
                 }
             }
         ) { error ->
@@ -49,18 +60,38 @@ class NetworkManager private constructor(context: Context) {
         requestQueue.add(request)
     }
 
-    fun getAccessToken(authCode: String, listener: NetworkGetListener<String?>) {
-        val url = prefixURL2 + "redirect"
-        val jsonParams: MutableMap<String?, Any?> = HashMap()
-        jsonParams["response"] = authCode
+    private fun checkResponseSuccess(json:JSONObject):Boolean{
+        if(!json.has("success")){
+            Log.e(TAG,"Invalid response.")
+            return false
+        }
+
+        if(!json.getBoolean("success")){
+            Log.e(TAG,"Request Failed.")
+            Log.e(TAG,json.getJSONObject("response").getString("message"))
+            return false
+        }
+
+        return true
+    }
+
+    fun getAccessToken(authCode: String, listener: NetworkGetListener<Boolean>) {
+        val url = authURL + "login"
         val request = JsonObjectRequest(
-            Request.Method.GET, url+"?code=$authCode", JSONObject(jsonParams),
+            Request.Method.GET, "$url?code=$authCode", null,
             { response ->
                 Log.d(
                     "$TAG: ",
                     "somePostRequest Response : $response"
                 )
-                listener.getResult(response.toString())
+                if(checkResponseSuccess(response)){
+                    AuthorizeManager.getInstance()?.setAccessToken(response.getString("access_token"))
+                    listener.getResult(true)
+                }
+                else{
+                    listener.getError("Error")
+                    listener.getResult(false)
+                }
             }
         ) { error ->
             if (null != error.networkResponse) {
@@ -68,7 +99,7 @@ class NetworkManager private constructor(context: Context) {
                     "$TAG: ",
                     "Error Response code: " + error.networkResponse.statusCode
                 )
-                listener.getResult(null)
+                listener.getResult(false)
             }
         }
         requestQueue.add(request)
@@ -77,8 +108,9 @@ class NetworkManager private constructor(context: Context) {
     companion object {
         private const val TAG = "NetworkManager"
         private var instance: NetworkManager? = null
-        private const val prefixURL = "https://noteapp.k-paas.org/"
-        private const val prefixURL2 = "https://testnote.k-paas.org/"
+        private const val authURL = "https://noteappauth.k-paas.org/"
+        private const val ocrURL = "https://noteappocr.k-paas.org/"
+        private const val dbURL = "https://noteappnoteapi.k-paas.org/"
         @Synchronized
         fun getInstance(context: Context): NetworkManager? {
             if (instance == null) instance = NetworkManager(context)

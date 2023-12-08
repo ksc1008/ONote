@@ -7,7 +7,7 @@ import java.util.Stack
 import kotlin.math.abs
 import kotlin.math.pow
 
-open class CanvasStroke(private var x:Float, private var y:Float, private val container: CanvasViewModel.PiecewiseCanvas, private val paint: Paint){
+open class CanvasStroke(private var x:Float, private var y:Float, private val container: DrawingCanvas.CanvasPaper, private val paint: Paint){
     open class StrokePoint(val pX:Int, val pY:Int, val path: CanvasStroke, val includeDrawing:Boolean = true){
         private lateinit var container:MutableList<StrokePoint>
         fun addToPiecewiseCanvas(cont:MutableList<StrokePoint>){
@@ -15,7 +15,7 @@ open class CanvasStroke(private var x:Float, private var y:Float, private val co
         }
     }
 
-    val drawThreshold = 2f
+    private val drawThreshold = 2f
 
     private val pathPoints: Stack<StrokePoint> = Stack()
     var removed = false
@@ -35,16 +35,6 @@ open class CanvasStroke(private var x:Float, private var y:Float, private val co
         addDividedPathPoint(sp)
         pathPoints.push(sp)
         container.addPoint(sp)
-    }
-
-    fun getPathPointsData():List<StrokePointData>{
-        val l:MutableList<StrokePointData> = mutableListOf()
-        for(p in pathPoints){
-            if(p.includeDrawing){
-                l.add(StrokePointData(p.pX,p.pX))
-            }
-        }
-        return l
     }
 
     private fun addDividedPathPoint(sp: StrokePoint){
@@ -82,15 +72,18 @@ open class CanvasStroke(private var x:Float, private var y:Float, private val co
     }
 
     fun draw(viewCanvas: Canvas?){
-        //for(p in pathPoints){
-        //    viewCanvas?.drawCircle(p.pX.toFloat(),p.pY.toFloat(),3f,paint)
-        //}
         viewCanvas?.drawPath(path,paint)
     }
 
     companion object{
         fun serialize(canvasStroke:CanvasStroke):StrokeData{
-            return StrokeData(canvasStroke.paint.strokeWidth,canvasStroke.paint.color,canvasStroke.getPathPointsData())
+            val l:MutableList<StrokePointData> = mutableListOf()
+            for(p in canvasStroke.pathPoints){
+                if(p.includeDrawing){
+                    l.add(StrokePointData(p.pX,p.pX))
+                }
+            }
+            return StrokeData(canvasStroke.x,canvasStroke.y, canvasStroke.paint.strokeWidth,canvasStroke.paint.color,l)
         }
     }
 }

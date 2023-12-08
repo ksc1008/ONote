@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
 import com.ksc.onote.CanvasActivity
+import com.ksc.onote.drawingCanvas.CanvasDrawer
 import com.ksc.onote.drawingCanvas.CanvasViewModel
 
 interface OnAreaAssignedListener{
@@ -20,12 +21,12 @@ interface OnAreaAssignedListener{
 }
 
 class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
-    lateinit var canvas:CanvasViewModel
+    lateinit var canvas:CanvasDrawer
+    lateinit var canvasViewModel:CanvasViewModel
 
     enum class DrawingToolMod{PEN, ERASER, IMAGE, HIGHLIGHTER}
 
     private var _tempBitmap:Bitmap? = null
-    private var placingImage:Boolean = false
     private var currentDrawingTool: DrawingToolMod = DrawingToolMod.PEN
     private var _onAreaAssignedListener: OnAreaAssignedListener? = null
     var currentTool: CanvasActivity.Toolbar = CanvasActivity.Toolbar.Pen
@@ -35,7 +36,6 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
 
     private var imagePlaceOffsetX = 0f
     private var imagePlaceOffsetY = 0f
-    var exclusionRects = listOf(Rect(0,top,10,bottom),Rect(10,top,20,bottom),Rect(20,top,30,bottom),Rect(40,top,50,bottom),Rect(50,top,60,bottom),Rect(60,top,70,bottom))
 
     fun setOnAreaAssignedListener(listener: OnAreaAssignedListener){
         _onAreaAssignedListener = listener
@@ -50,8 +50,9 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         strokeWidth = 4f
     }
 
-    fun injectViewModel(viewModel:CanvasViewModel){
-        canvas = viewModel
+    fun injectViewModel(drawer:CanvasDrawer, viewModel: CanvasViewModel){
+        canvas = drawer
+        canvasViewModel = viewModel
     }
 
     fun changeErase(){
@@ -99,6 +100,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
             }
             MotionEvent.ACTION_MOVE->{
                 canvas.moveView(PointF(penX,penY))
+                canvas.updateVisibleCanvases(height,canvasViewModel)
             }
         }
         invalidate()
@@ -121,37 +123,38 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
         when(event.action){
             MotionEvent.ACTION_DOWN->{
                 isPenDown = true
+                canvas.updateActiveCanvas(penX,penY,canvasViewModel)
                 when (currentDrawingTool) {
-                    DrawingToolMod.PEN -> canvas.addStroke(penX, penY)
-                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f, event.x, event.y)
+                    DrawingToolMod.PEN -> canvas.addStroke(penX, penY, canvasViewModel)
+                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f, event.x, event.y, canvasViewModel)
                     DrawingToolMod.IMAGE -> {
                         Log.d("Place Image Log","Adding Bitmap to Canvas. (${_tempBitmap?.width?:0},${_tempBitmap?.height?:0})")
                         canvas.startPlaceImage(_tempBitmap?: Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888),penX + imagePlaceOffsetX, penY + imagePlaceOffsetY)
                         //_tempBitmap = null
                     }
-                    DrawingToolMod.HIGHLIGHTER -> canvas.addStroke(penX, penY)
+                    DrawingToolMod.HIGHLIGHTER -> canvas.addStroke(penX, penY, canvasViewModel)
                 }
             }
 
             MotionEvent.ACTION_UP->{
                 isPenDown = false
                 when(currentDrawingTool){
-                    DrawingToolMod.PEN -> canvas.saveToBitmap()
+                    DrawingToolMod.PEN -> canvas.penUp()
                     DrawingToolMod.ERASER ->{}
                     DrawingToolMod.IMAGE ->{
-                        canvas.placeImage()
+                        canvas.placeImage(canvasViewModel)
                         changePen()
                     }
-                    DrawingToolMod.HIGHLIGHTER -> canvas.saveToBitmap()
+                    DrawingToolMod.HIGHLIGHTER -> canvas.penUp()
                 }
             }
 
             MotionEvent.ACTION_MOVE->{
                 when (currentDrawingTool) {
-                    DrawingToolMod.PEN -> canvas.appendStroke(penX, penY)
-                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f, event.x, event.y)
+                    DrawingToolMod.PEN -> canvas.appendStroke(penX, penY, canvasViewModel)
+                    DrawingToolMod.ERASER -> canvas.eraseCircle(20f, event.x, event.y, canvasViewModel)
                     DrawingToolMod.IMAGE -> canvas.movePlacingImage(penX + imagePlaceOffsetX,penY + imagePlaceOffsetY)
-                    DrawingToolMod.HIGHLIGHTER -> canvas.appendStroke(penX, penY)
+                    DrawingToolMod.HIGHLIGHTER -> canvas.appendStroke(penX, penY, canvasViewModel)
                 }
             }
         }
@@ -160,7 +163,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
 
 
     fun clearCanvas(){
-        canvas.clear()
+        canvas.clear(canvasViewModel)
         invalidate()
     }
 
@@ -173,7 +176,7 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     }
 
     override fun onDraw(canvas: Canvas?) {
-        this.canvas.drawAll(canvas)
+        this.canvas.drawAll(canvas, canvasViewModel)
         if(currentTool == CanvasActivity.Toolbar.Rectangle){
             this.canvas.rectangleArea.drawRectangle(canvas)
         }
@@ -186,32 +189,18 @@ class MyCanvasView(ctx: Context?, attrs: AttributeSet?): View(ctx,attrs) {
     }
 
     fun getAreaBitmap():Bitmap?{
-        return canvas.getAreaPixels()
+        return canvas.getAreaPixels(canvasViewModel)
     }
 
     fun scaleEvent(scaleFactorMultiplier:Float){
         if(currentTool == CanvasActivity.Toolbar.Hand)
-            canvas.setScaleFactor(canvas.getScaleFactor() * scaleFactorMultiplier)
+            canvas.scaleFactor = canvas.scaleFactor * scaleFactorMultiplier
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        for(r in exclusionRects){
-            r.bottom = 500
-        }
-
+        canvas.centerHoriz(w)
+        canvas.updateVisibleCanvases(h,canvasViewModel)
+        canvas.setViewSize(w,h)
         super.onSizeChanged(w, h, oldw, oldh)
-
-    }
-
-    override fun onApplyWindowInsets(insets: WindowInsets?): WindowInsets {
-        return super.onApplyWindowInsets(insets)
-    }
-
-    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        super.onLayout(changed, left, top, right, bottom)
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
     }
 }

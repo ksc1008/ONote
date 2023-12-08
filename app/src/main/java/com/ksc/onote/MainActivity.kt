@@ -1,9 +1,14 @@
 package com.ksc.onote
 
+import android.app.Instrumentation.ActivityResult
+import android.content.ContentValues.TAG
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.navigation.findNavController
@@ -11,13 +16,21 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.ksc.onote.databinding.ActivityMainBinding
+import java.lang.Exception
 
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
-
+    private var uri:Uri? = null
+    val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if( it.resultCode == RESULT_OK) {
+            uri = it.data?.data
+            Log.d(TAG,uri.toString())
+            startCanvas()
+        }
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,9 +46,27 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
 
         binding.fab.setOnClickListener {
-            val switchActivityIntent = Intent(this, CanvasActivity::class.java)
-            startActivity(switchActivityIntent)
+            showFileChooser()
+        }
+    }
 
+    private fun startCanvas(){
+        val switchActivityIntent = Intent(this, CanvasActivity::class.java)
+
+        if(uri!= null){
+            switchActivityIntent.putExtra("Type","from_uri")
+            switchActivityIntent.putExtra("uri",uri.toString())
+        }
+        startActivity(switchActivityIntent)
+    }
+    private fun showFileChooser(){
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+
+        intent.type = "application/pdf"
+        try {
+            launcher.launch(intent)
+        } catch (ex:Exception) {
+            ex.printStackTrace()
         }
     }
 

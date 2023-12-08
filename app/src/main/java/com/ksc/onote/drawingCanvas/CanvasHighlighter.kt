@@ -4,7 +4,7 @@ import android.graphics.Paint
 import java.util.Stack
 import kotlin.math.pow
 
-class CanvasHighlighter(private var x:Float, private var y:Float, private val container: CanvasViewModel.PiecewiseCanvas, private val paint: Paint):
+class CanvasHighlighter(private var x:Float, private var y:Float, private val container: DrawingCanvas.CanvasPaper, private val paint: Paint):
     CanvasStroke(x,y,container,paint){
 
 
@@ -45,7 +45,14 @@ class CanvasHighlighter(private var x:Float, private var y:Float, private val co
 
     companion object{
         fun serialize(canvasStroke:CanvasHighlighter):StrokeData{
-            return StrokeData(canvasStroke.paint.strokeWidth,canvasStroke.paint.color,canvasStroke.getPathPointsData())
+            val l:MutableList<StrokePointData> = mutableListOf()
+            for(p in canvasStroke.pathPoints){
+                if(p.includeDrawing){
+                    l.add(StrokePointData(p.pX,p.pX))
+                }
+            }
+
+            return StrokeData(canvasStroke.x, canvasStroke.y ,canvasStroke.paint.strokeWidth,canvasStroke.paint.color,l)
         }
     }
 }

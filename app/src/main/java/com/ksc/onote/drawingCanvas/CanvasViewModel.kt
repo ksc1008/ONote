@@ -1,380 +1,115 @@
 package com.ksc.onote.drawingCanvas
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.PointF
-import android.graphics.PorterDuff
-import androidx.core.graphics.blue
-import androidx.core.graphics.green
-import androidx.core.graphics.red
+import android.content.Context
+import android.net.Uri
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.ksc.onote.canvasViewUI.MyCanvasView
-import java.util.LinkedList
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.pow
+import com.ksc.onote.utils.PDFTool
+import java.io.File
+import kotlin.math.abs
 
-class CanvasViewModel: ViewModel() {
-    var width:Int = 0
-    var height:Int = 0
+class CanvasViewModel:ViewModel() {
 
-    enum class DrawMod{PENDOWN, PENUP, RESET, IDLE, IMAGEDOWN, IMAGEUP}
-    var currentDrawMod: DrawMod = DrawMod.IDLE
-    var currentPentool: MyCanvasView.DrawingToolMod = MyCanvasView.DrawingToolMod.PEN
+    var canvasList: MutableLiveData<MutableList<DrawingCanvas>>
+    = MutableLiveData<MutableList<DrawingCanvas>>(mutableListOf())
+        private set
+    var visibleCanvasList:MutableLiveData<List<DrawingCanvas>>
+    = MutableLiveData<List<DrawingCanvas>>(listOf())
+        private set
+    var activeCanvas:DrawingCanvas? = null
+        private set
 
-    private var bitmapCache: Bitmap
-    val piecewiseCanvas: PiecewiseCanvas = PiecewiseCanvas()
-    private val strokeList: LinkedList<CanvasStroke> = LinkedList()
-    private val highlighterList: LinkedList<CanvasHighlighter> = LinkedList()
-    private val bitmapList: LinkedList<CanvasBitmap> = LinkedList()
-    private var _bitmap: Bitmap
-    private var canvasTemp: Canvas
-    private var placingBitmap: CanvasBitmap? = null
-    private var _scaleFactor = 1f
+    var borderHorizontal:Int = 0
+        private set
+    var borderBottom:Int = 0
+        private set
 
-    private var currentPenWidth:Float = 10f
-    private var currentPenColor:Int = Color.BLACK
+    var visibleIdxStart = -1
+        private set
+    var visibleIdxEnd = -1
+        private set
 
-
-    @JvmField
-    var handHoldPoint= PointF(0f,0f)
-    @JvmField
-    var handMovePoint= PointF(0f,0f)
-    var viewPoint:PointF = PointF(0f,0f)
-
-    val rectangleArea = RectangleArea()
-
-    class PiecewiseCanvas{
-        private val pathPoints:MutableList<MutableList<MutableList<CanvasStroke.StrokePoint>>> = mutableListOf()
-
-        lateinit var bgBitmap:Bitmap
-
-        private var rows:Int = 0
-        private var cols:Int = 0
-
-        private var _width:Int = 0
-        private var _height:Int = 0
-
-        fun changeCache(newRows:Int, newCols:Int, width:Int, height:Int){
-            this._width = width
-            this._height = height
-
-            for (i: Int in 1..newRows) {
-                pathPoints.add(mutableListOf())
-                for (j: Int in 1..newCols) {
-                    pathPoints.last().add(mutableListOf())
-                }
-            }
-
-            cols = newCols
-            rows = newRows
-
-            bgBitmap = Bitmap.createBitmap(_width,_height,Bitmap.Config.ARGB_8888)
-            bgBitmap.eraseColor(Color.WHITE)
+    fun toData():NoteModel{
+        val list:MutableList<CanvasModel> = mutableListOf()
+        for(c in canvasList.value!!){
+            list.add(DrawingCanvas.serialize(c))
         }
 
-        fun getWidth():Int{
-            return _width
-        }
-
-        fun getHeight():Int{
-            return _height
-        }
-        fun getIndex(x:Int, y:Int):Pair<Int,Int>{
-            return Pair((x.toFloat() / (_width.toFloat()/cols)).toInt(),(x.toFloat() / (_height.toFloat()/rows)).toInt())
-        }
-
-        fun addPoint(point: CanvasStroke.StrokePoint){
-            val idx = getIndex(point.pX,point.pY)
-            if(idx.first<0 || idx.first>=cols || idx.second<0 || idx.second>=rows){
-                throw ArrayIndexOutOfBoundsException("Can't add point at point (${point.pX}, ${point.pY})")
-            }
-            pathPoints[idx.second][idx.first].add(point)
-            point.addToPiecewiseCanvas(pathPoints[idx.second][idx.first])
-        }
-
-        fun checkOverlap(x:Int, y:Int):MutableList<CanvasStroke.StrokePoint>{
-            val idx = getIndex(x,y)
-            val list:MutableList<CanvasStroke.StrokePoint> = mutableListOf()
-
-            for(p in pathPoints[idx.second][idx.first]){
-                if(p.pX == x && p.pY == y)
-                    list.add(p)
-            }
-            return list
-        }
-
-        fun removePathPoint(p: CanvasStroke.StrokePoint){
-            val idx = getIndex(p.pX,p.pY)
-            pathPoints[idx.second][idx.first].remove(p)
-        }
-        fun dispose(){
-            pathPoints.clear()
-        }
-
+        return NoteModel("NoName","","",list)
     }
 
-    fun resize(){
-
+    fun createEmpty(canvasWidth:Int, canvasHeight:Int){
+        clearData()
+        canvasList.value?.add(DrawingCanvas(canvasWidth,canvasHeight))
+        calculateCanvasPositions(50)
     }
 
-    fun getScaleFactor():Float{return _scaleFactor}
-    fun setScaleFactor(value:Float){
-        _scaleFactor = max(0.4f, min(value, 2.0f))}
-
-    fun clear(){
-        for(s in strokeList){
-            s.removeStroke()
-        }
-        for(h in highlighterList){
-            h.removeStroke()
-        }
-        bitmapList.clear()
-        strokeList.clear()
-        highlighterList.clear()
-        currentDrawMod = DrawMod.RESET
-    }
-    fun addStroke(strokeX:Float, strokeY:Float){
-        val adjustX = strokeX / _scaleFactor + viewPoint.x
-        val adjustY = strokeY / _scaleFactor + viewPoint.y
-
-
-        val strokePaint = Paint().apply {
-            isAntiAlias = true
-            isDither = true
-            style = Paint.Style.STROKE
-            strokeJoin = Paint.Join.ROUND
-            strokeCap = Paint.Cap.ROUND
-            strokeWidth = currentPenWidth
-            color = currentPenColor
-        }
-        if (adjustX < 0 || adjustX >= piecewiseCanvas.getWidth() || adjustY < 0 || adjustY >= piecewiseCanvas.getHeight())
+    fun createFromPdf(pdfFile: File, densityDpi:Int){
+        val bitmaps = PDFTool.read_from_file(pdfFile,densityDpi)
+        if(bitmaps.isNullOrEmpty()){
+            createEmpty(2000,2000)
             return
-
-        if(currentPentool == MyCanvasView.DrawingToolMod.PEN) {
-            val s = CanvasStroke(
-                adjustX,
-                adjustY,
-                piecewiseCanvas,
-                strokePaint
-            )
-            strokeList.add(s)
         }
-        else{
-            strokePaint.strokeWidth = strokePaint.strokeWidth * 5
-            strokePaint.strokeCap = Paint.Cap.BUTT
-            strokePaint.strokeJoin = Paint.Join.MITER
-            strokePaint.color = Color.argb(100,currentPenColor.red,currentPenColor.green,currentPenColor.blue)
-            val s = CanvasHighlighter(
-                adjustX,
-                adjustY,
-                piecewiseCanvas,
-                strokePaint
-            )
-            highlighterList.add(s)
+        clearData()
+        for(b in bitmaps){
+            canvasList.value?.add(DrawingCanvas(b.width,b.height,b))
         }
-
-        currentDrawMod = DrawMod.PENDOWN
+        calculateCanvasPositions(50)
     }
 
-
-    fun appendStroke(strokeX:Float, strokeY:Float){
-        val adjustX = strokeX / _scaleFactor + viewPoint.x
-        val adjustY = strokeY / _scaleFactor + viewPoint.y
-        if(currentPentool == MyCanvasView.DrawingToolMod.PEN) {
-            if (strokeList.isNotEmpty())
-                strokeList.last().appendStroke(adjustX, adjustY)
-        }
-        else{
-            if (highlighterList.isNotEmpty())
-                highlighterList.last().appendStroke(adjustX, adjustY)
-        }
-    }
-
-    fun eraseCircle(radius:Float, eraseX:Float, eraseY:Float){
-        val viewEraseX = eraseX + viewPoint.x
-        val viewEraseY = eraseY + viewPoint.y
-        fun feasible(i:Int, j:Int):Boolean{
-            if((viewEraseX-j).pow(2) + (viewEraseY-i).pow(2) > radius.pow(2))
-                return false
-            if(j<0 || j>=piecewiseCanvas.getWidth() || i<0 || i>=piecewiseCanvas.getHeight())
-                return false
-            return true
-        }
-
-        var erased = false
-
-        for(j:Int in (viewEraseX-radius).toInt()..(viewEraseX+radius).toInt()){
-            for(i:Int in (viewEraseY-radius).toInt() .. (viewEraseY+radius).toInt()){
-                if(!feasible(i,j))
-                    continue
-                val t = piecewiseCanvas.checkOverlap(j,i)
-                for(st in t){
-                    val stroke = st.path
-                    if(!stroke.removed){
-                        stroke.removeStroke()
-                        if(stroke is CanvasHighlighter)
-                            highlighterList.remove(stroke)
-                        else
-                            strokeList.remove(stroke)
-                    }
-                    erased = true
-                }
-            }
-        }
-
-        if(erased)
-            currentDrawMod = DrawMod.RESET
-    }
-
-    fun saveToBitmap(){
-        currentDrawMod = DrawMod.PENUP
-    }
-
-    fun startPlaceImage(bitmap:Bitmap,moveX:Float, moveY:Float){
-        placingBitmap = CanvasBitmap(moveX+viewPoint.x,moveY+viewPoint.y,bitmap.copy(bitmap.config,true))
-        currentDrawMod = DrawMod.IMAGEDOWN
-    }
-
-    fun movePlacingImage(moveX:Float, moveY:Float){
-        placingBitmap?.move(moveX+viewPoint.x,moveY+viewPoint.y)
-    }
-
-    fun placeImage(){
-        if(placingBitmap!=null)
-            bitmapList.add(placingBitmap!!)
-        currentDrawMod = DrawMod.IMAGEUP
-    }
-
-    fun drawCurrentPen(canvas:Canvas?){
-        if(currentPentool== MyCanvasView.DrawingToolMod.PEN)
-            strokeList.lastOrNull()?.draw(canvas)
-        else
-            highlighterList.lastOrNull()?.draw(canvas)
-    }
-
-    fun drawAll(canvas: Canvas?){
-        if(canvas == null)
+    fun createFromPdfUri(pdfUri: Uri, context: Context){
+        val bitmaps = PDFTool.read_from_pdf_uri(pdfUri,context)
+        if(bitmaps.isNullOrEmpty()){
+            createEmpty(2000,2000)
             return
+        }
+        clearData()
+        for(b in bitmaps){
+            canvasList.value?.add(DrawingCanvas(b.width,b.height,b))
+        }
+        calculateCanvasPositions(50)
+    }
 
-        canvas.drawColor(Color.LTGRAY)
-        canvas.save()
-        canvas.scale(_scaleFactor,_scaleFactor)
-        canvas.translate(-viewPoint.x,-viewPoint.y)
-        canvas.drawBitmap(piecewiseCanvas.bgBitmap,0f,0f, null)
+    fun clearData(){
+        activeCanvas = null
+        visibleCanvasList.value = listOf()
+        canvasList.value = mutableListOf()
+    }
 
-        canvasTemp.density = canvas.density
-        canvasTemp.drawFilter = canvas.drawFilter
+    fun setActiveCanvas(canvas:DrawingCanvas?){
+        activeCanvas = canvas
+    }
 
-        when(currentDrawMod){
-            DrawMod.PENDOWN -> {
-                if(currentPentool== MyCanvasView.DrawingToolMod.HIGHLIGHTER)
-                    highlighterList.lastOrNull()?.draw(canvas)
-                canvas.drawBitmap(bitmapCache, 0f, 0f, null)
-                if(currentPentool== MyCanvasView.DrawingToolMod.PEN)
-                    strokeList.lastOrNull()?.draw(canvas)
+    fun setVisibleCanvas(from:Int, to:Int){
+        if(visibleIdxStart!=-1){
+            for(i in visibleIdxStart until from){
+                canvasList.value?.get(i)?.deactivate()
             }
-            DrawMod.PENUP -> {
-                canvasTemp.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-                if(currentPentool== MyCanvasView.DrawingToolMod.HIGHLIGHTER)
-                    highlighterList.lastOrNull()?.draw(canvasTemp)
-                canvasTemp.drawBitmap(bitmapCache, 0f, 0f, null)
-                if(currentPentool== MyCanvasView.DrawingToolMod.PEN)
-                    strokeList.lastOrNull()?.draw(canvasTemp)
-
-                //canvas.setBitmap(bitmapCache)
-                bitmapCache = _bitmap.copy(_bitmap.config,false)
-                canvas.drawBitmap(bitmapCache, 0f, 0f, null)
-                currentDrawMod = DrawMod.IDLE
-
-            }
-            DrawMod.RESET -> {
-                canvasTemp.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-
-                for (highlight in highlighterList) {
-                    highlight.draw(canvasTemp)
-                }
-                for (stroke in strokeList) {
-                    stroke.draw(canvasTemp)
-                }
-                for(bitmap in bitmapList){
-                    bitmap.draw(canvasTemp)
-                }
-                bitmapCache = _bitmap.copy(_bitmap.config,false)
-                canvas.drawBitmap(bitmapCache, 0f, 0f, null)
-                currentDrawMod = DrawMod.IDLE
-            }
-            DrawMod.IDLE -> {
-                canvas.drawBitmap(bitmapCache, 0f,0f, null)
-            }
-            DrawMod.IMAGEDOWN ->{
-                canvas.drawBitmap(bitmapCache, 0f,0f, null)
-                placingBitmap?.draw(canvas,true)
-            }
-            DrawMod.IMAGEUP ->{
-                canvasTemp.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-                canvasTemp.drawBitmap(bitmapCache, 0f,0f, null)
-                placingBitmap?.draw(canvasTemp)
-                bitmapCache = _bitmap.copy(_bitmap.config,false)
-                canvas.drawBitmap(bitmapCache, 0f,0f, null)
-                currentDrawMod = DrawMod.IDLE
-
+            for(i in to+1 until visibleIdxEnd){
+                canvasList.value?.get(i)?.deactivate()
             }
         }
-        canvas.restore()
-    }
-
-    fun getAreaPixels():Bitmap?{
-        if(!rectangleArea.getActive()){
-            return null
-        }
-
-        val left = rectangleArea.getArea().left.toInt() + viewPoint.x.toInt()
-        val top = rectangleArea.getArea().top.toInt() + viewPoint.y.toInt()
-
-        val bitmap = Bitmap.createBitmap(bitmapCache,left,
-            top,
-            rectangleArea.getArea().width().toInt(),rectangleArea.getArea().height().toInt())
-
-        rectangleArea.clear()
-        return bitmap
-    }
-
-    fun setHandHoldPoint(pivot:PointF){
-        handHoldPoint = pivot
-        handMovePoint = pivot
-    }
-    fun moveView(newPivot:PointF){
-        val d = PointF(handMovePoint.x-newPivot.x,handMovePoint.y-newPivot.y)
-        handMovePoint = newPivot
-        viewPoint = PointF(viewPoint.x + d.x / _scaleFactor, viewPoint.y + d.y / _scaleFactor)
-    }
-
-    fun setPenWidth(width:Float){
-        currentPenWidth = width * 2
-
-    }
-
-    fun setPenColor(color:Int){
-        currentPenColor = color
-    }
-
-    init{
-        width = 2000
-        height = 2000
-
-        piecewiseCanvas.changeCache(100,100,height,width)
-        _bitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888,true)
-        canvasTemp = Canvas(_bitmap)
-
-        bitmapCache = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888,true)
+        visibleCanvasList.value = canvasList.value?.subList(from,to+1)
+        visibleIdxStart = from
+        visibleIdxEnd = to
     }
 
     override fun onCleared() {
-        piecewiseCanvas.dispose()
-        strokeList.clear()
         super.onCleared()
+    }
+
+    fun calculateCanvasPositions(spacing:Int){
+        var minX = 0
+        var lastY = 0
+        for(c in canvasList.value?: listOf()){
+            c.setCanvasPosition(-c.width/2,lastY)
+            if(c.x<minX)
+                minX = c.x
+            lastY += c.height + spacing
+        }
+
+        borderHorizontal = abs(minX)
+        borderBottom = lastY
     }
 }

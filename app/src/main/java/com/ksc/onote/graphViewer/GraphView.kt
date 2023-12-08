@@ -5,10 +5,7 @@ import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.PointF
 import android.util.AttributeSet
 import android.util.Log
@@ -18,13 +15,11 @@ import android.view.animation.AnimationUtils
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebView
-import androidx.core.view.doOnPreDraw
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
 import com.ksc.onote.R
 import com.ksc.onote.formulaViewer.FormulaViewer
-import java.lang.Exception
-import java.util.Base64
+import com.ksc.onote.utils.Base64Tool
 import kotlin.math.abs
 
 
@@ -38,16 +33,7 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
     var screenshot:Bitmap? = null
 
 
-    fun stringToBitmap(encoded:String):Bitmap?{
-        return try {
-            val decoder = Base64.getDecoder()
-            val encodeByte: ByteArray = decoder.decode(encoded.split('\"')[1].substring("data:image/png;base64,".length))
-            BitmapFactory.decodeByteArray(encodeByte, 0, encodeByte.size)
-        } catch(e:Exception){
-            Log.e(TAG,e.toString())
-            null
-        }
-    }
+
 
     private fun getHtml(latex:String, grid:Boolean = true, axis:Boolean = true):String{
         val html = "<!DOCTYPE html>\n" +
@@ -248,7 +234,7 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
     fun screenshot(){
         evaluateJavascript("calculator.screenshot({targetPixelRatio: 2});"){
             Log.d(TAG,it)
-            screenshot = stringToBitmap(it)
+            screenshot = Base64Tool.decodeImage(it.split('\"')[1].substring("data:image/png;base64,".length))
         }
     }
 }

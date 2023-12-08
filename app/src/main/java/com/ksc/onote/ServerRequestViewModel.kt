@@ -3,6 +3,7 @@ package com.ksc.onote
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.ksc.onote.utils.Base64Tool
 import kotlinx.coroutines.delay
 import java.io.ByteArrayOutputStream
 import java.util.Base64
@@ -25,22 +26,13 @@ private fun longLog(TAG:String, msg:String){
         }
 }
 
-private fun encodeImage(bm: Bitmap): String? {
-    val baos = ByteArrayOutputStream()
-    bm.compress(Bitmap.CompressFormat.PNG, 100, baos)
-    val b = baos.toByteArray()
-    val encoder = Base64.getEncoder()
-
-    longLog("Encode Result", encoder.encodeToString(b))
-    return encoder.encodeToString(b)
-}
 class ServerRequestViewModel: ViewModel() {
     suspend fun getFormulaFromServer(image: Bitmap):Pair<String,Boolean>{
         var finished = false
         var response:String = ""
         var success:Boolean = false
 
-        val request = encodeImage(image)
+        val request = Base64Tool.encodeImage(image)
 
         NetworkManager.getInstance()
             ?.postRequestOcrServer(request,object: NetworkGetListener<String?> {
@@ -55,7 +47,12 @@ class ServerRequestViewModel: ViewModel() {
                 finished = true
             }
 
-        })
+                override fun getError(message: String) {
+                    success = false
+                    finished = true
+                }
+
+            })
         while(!finished){
             delay(100L)
         }

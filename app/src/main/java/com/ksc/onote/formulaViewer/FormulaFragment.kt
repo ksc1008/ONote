@@ -82,6 +82,7 @@ class FormulaFragment : Fragment() {
 
         val formulaObserver = Observer<String> { value ->
             binding?.formulaDisplay?.setDisplayText("$$ $value $$")
+
         }
         viewModel.outputString.observe(viewLifecycleOwner, formulaObserver)
         binding?.closeButton?.setOnClickListener{
@@ -123,12 +124,7 @@ class FormulaFragment : Fragment() {
     fun getFormulaImage():Bitmap?{
         return binding?.formulaDisplay?.getFormulaImage()
     }
-
-    fun getCalculate(){
-        GlobalScope.launch(Dispatchers.Main) {
-            serverModel.getFormulaFromServer(Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888))
-        }
-    }
+    
 
     fun hide(){
         if(viewInActivity.visibility == View.INVISIBLE)

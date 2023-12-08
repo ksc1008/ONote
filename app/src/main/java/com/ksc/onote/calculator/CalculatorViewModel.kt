@@ -129,11 +129,12 @@ class CalculatorViewModel: ViewModel() {
     }
 
     fun calculate(formula:String):Boolean {
+        formula.replace("\\","\\\\")
         if(webView==null){
             return false
         }
 
-        webView?.evaluateJavascript("selectCalc(\"$formula\");",null)
+        webView?.evaluateJavascript("selectCalc(\"${formula.replace("\\","\\\\")}\");",null)
         return true
     }
 

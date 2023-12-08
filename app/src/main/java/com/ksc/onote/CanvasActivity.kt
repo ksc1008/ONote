@@ -1,8 +1,10 @@
 package com.ksc.onote
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.RectF
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -17,11 +19,21 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.ksc.onote.authorization.AuthorizeManager
 import com.ksc.onote.calculator.CalculatorViewModel
 import com.ksc.onote.canvasViewUI.OnAreaAssignedListener
 import com.ksc.onote.canvasViewUI.PenselectFragment
 import com.ksc.onote.databinding.ActivityCanvasBinding
+import com.ksc.onote.drawingCanvas.CanvasDrawer
+import com.ksc.onote.drawingCanvas.CanvasModel
+import com.ksc.onote.drawingCanvas.CanvasSerializer
 import com.ksc.onote.drawingCanvas.CanvasViewModel
+import com.ksc.onote.drawingCanvas.NoteModel
 import com.ksc.onote.formulaViewer.CalculatorFragment
 import com.ksc.onote.formulaViewer.FormulaFragment
 import com.ksc.onote.formulaViewer.FormulaViewModel
@@ -31,7 +43,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.io.File
 import kotlin.math.abs
+import kotlin.reflect.typeOf
 
 
 class CanvasActivity : AppCompatActivity() {
@@ -46,6 +61,8 @@ class CanvasActivity : AppCompatActivity() {
     private val formulaViewModel: FormulaViewModel by viewModels()
     private val serverRequestViewModel: ServerRequestViewModel by viewModels()
     private val calculatorViewModel:CalculatorViewModel by viewModels()
+    private val canvasDrawer: CanvasDrawer by viewModels()
+    private val canvasViewModel:CanvasViewModel by viewModels()
     private val penSelectFragment: PenselectFragment? by lazy{
         binding.penSelectFragmentContainer.getFragment<PenselectFragment?>()?.apply {
             setOnToolSelectListener(object:
@@ -75,11 +92,11 @@ class CanvasActivity : AppCompatActivity() {
             setOnPenSettingChangedListener(object:
                 PenselectFragment.OnPenSettingChangedListener {
                 override fun invokeSliderMove(value: Int) {
-                    canvasViewModel.setPenWidth(value.toFloat())
+                    canvasDrawer.setPenWidth(value.toFloat())
                 }
 
                 override fun invokeColorChange(color: Int) {
-                    canvasViewModel.setPenColor(color)
+                    canvasDrawer.setPenColor(color)
                 }
 
             })
@@ -87,7 +104,6 @@ class CanvasActivity : AppCompatActivity() {
     }
 
     lateinit var buttons:ArrayList<ImageButton>
-    private val canvasViewModel: CanvasViewModel by viewModels()
     lateinit var scaleDetector: ScaleGestureDetector
     private var lastPointerX = 0f
     private var lastPointerY = 0f
@@ -108,8 +124,10 @@ class CanvasActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        Log.d("On Canvas Created:","Canvas Activity Created")
+
         setContentView(binding.root)
-        binding.canvas.injectViewModel(canvasViewModel)
+        binding.canvas.injectViewModel(canvasDrawer, canvasViewModel)
         NetworkManager.getInstance(this)
         buttons = arrayListOf(binding.toolbarPenButton,binding.toolbarRectangleButton, binding.toolbarHandButton)
 
@@ -262,7 +280,6 @@ class CanvasActivity : AppCompatActivity() {
 
         calculatorViewModel.runAgent(this)
 
-        calculatorViewModel.calculate("\\\\sqrt{2}")
 
         calculatorViewModel.bridge.setOnResultListener(object: CalculatorViewModel.OnCalculationResult{
             override fun invokeSuccess(result: String) {
@@ -272,8 +289,32 @@ class CanvasActivity : AppCompatActivity() {
             override fun invokeFail() {
                 Log.d("Calculation Complete:","error")
             }
-
         })
+
+        binding.btnSave.setOnClickListener{
+            val json = CanvasSerializer.toJson(canvasViewModel.toData())
+            val gson:Gson = GsonBuilder().setPrettyPrinting().create()
+            val jelem: JsonElement = gson.fromJson(json, JsonElement::class.java)
+            val jobj:JsonObject = jelem.asJsonObject
+        }
+
+        AuthorizeManager.getInstance(this)
+    }
+
+    override fun onStart() {
+        when(intent.getStringExtra("Type")){
+            null->canvasViewModel.createEmpty(2000,2000)
+            "wide"->{
+                canvasViewModel.createEmpty(1000,2000)
+            }
+            "from_uri"->{
+                val uri:Uri? = Uri.parse(intent.getStringExtra("uri"))
+                if(uri!=null){
+                    canvasViewModel.createFromPdfUri(uri,this)
+                }
+            }
+        }
+        super.onStart()
     }
 
     fun updateCalculation(result: String){
@@ -303,8 +344,6 @@ class CanvasActivity : AppCompatActivity() {
         if(!formulaViewModel.hasFormula())
             return
         binding.formulaFragmentContainer.getFragment<FormulaFragment?>()?.show()
-
-        calculatorViewModel.calculate("\\\\sqrt{2}")
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
