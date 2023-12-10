@@ -1,4 +1,4 @@
-package com.ksc.onote.formulaViewer
+package com.ksc.onote.calculator
 
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -16,6 +16,8 @@ import com.daasuu.ei.EasingInterpolator
 import com.ksc.onote.OnImageCopiedListener
 import com.ksc.onote.R
 import com.ksc.onote.databinding.FragmentCalculatorBinding
+import com.ksc.onote.formulaViewer.FormulaViewModel
+import com.ksc.onote.formulaViewer.FormulaViewer
 
 class CalculatorFragment : Fragment() {
 

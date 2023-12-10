@@ -4,8 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.PointF
-import android.graphics.Rect
-import android.util.DisplayMetrics
 import androidx.lifecycle.ViewModel
 import com.ksc.onote.canvasViewUI.MyCanvasView
 import kotlin.math.max
@@ -165,7 +163,7 @@ class CanvasDrawer: ViewModel() {
     private fun drawVisibleCanvasBackgrounds(canvas:Canvas, canvasViewModel:CanvasViewModel){
         for(c in canvasViewModel.visibleCanvasList.value?: listOf()){
             val slice = c.canvasPaper.sliceCnt
-            val bg = c.getBackground((viewWidth/scaleFactor).toInt())
+            val bg = c.getBackground()
 
             val imgTop = c.y
             val viewTop = viewPoint.y

@@ -25,7 +25,7 @@ import com.ksc.onote.canvasViewUI.PenselectFragment
 import com.ksc.onote.databinding.ActivityCanvasBinding
 import com.ksc.onote.drawingCanvas.CanvasDrawer
 import com.ksc.onote.drawingCanvas.CanvasViewModel
-import com.ksc.onote.formulaViewer.CalculatorFragment
+import com.ksc.onote.calculator.CalculatorFragment
 import com.ksc.onote.formulaViewer.FormulaFragment
 import com.ksc.onote.formulaViewer.FormulaViewModel
 import com.ksc.onote.graphViewer.GraphFragment

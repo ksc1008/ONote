@@ -63,7 +63,7 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
             return _height
         }
         private fun getIndex(x:Int, y:Int):Pair<Int,Int>{
-            return Pair((x.toFloat() / (_width.toFloat()/(cols-1))).toInt(),(x.toFloat() / (_height.toFloat()/(rows-1))).toInt())
+            return Pair((x.toFloat() / (_width.toFloat()/(cols-1))).toInt(),(y.toFloat() / (_height.toFloat()/(rows-1))).toInt())
         }
 
         fun addPoint(point: CanvasStroke.StrokePoint){
@@ -299,7 +299,7 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
     }
 
 
-    fun getBackground(scaledWidth:Int):List<Bitmap>{
+    fun getBackground():List<Bitmap>{
         return canvasPaper.bgBitmapFraction
     }
 

@@ -163,7 +163,7 @@ class NetworkManager private constructor(context: Context) {
         jsonParams["old_page_name"] = null
         jsonParams["access_token"] = key
         val page =HashMap<String?,Any?>()
-        page["name"] = name+"11"
+        page["name"] = name+"111"
         page["data"] = note
         jsonParams["new_page"] = page
         val obj = JSONObject(jsonParams)
