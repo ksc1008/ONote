@@ -24,11 +24,19 @@ import com.google.android.material.slider.Slider
 import com.google.android.material.slider.Slider.OnChangeListener
 import com.ksc.onote.R
 import com.skydoves.colorpickerview.listeners.ColorListener
+import kotlin.math.roundToInt
 
 
 class PenselectFragment : Fragment() {
     var selected:Int = -1
     var kept:Int = 1
+
+    private var penColor:Int = Color.BLACK
+    private var highlighterColor:Int = Color.YELLOW
+
+    private var penWidth:Int = 5
+    private var highlighterWidth:Int = 5
+    private var eraserWidth:Int = 5
 
     interface ToolSelectListener{
         fun invokeHighlighter()
@@ -70,16 +78,38 @@ class PenselectFragment : Fragment() {
             tools[i]?.setOnClickListener {
                 changeSelectedItem(i)
                 when(i){
-                    0-> onToolSelectListener?.invokeHighlighter()
-                    1-> onToolSelectListener?.invokePen()
-                    2-> onToolSelectListener?.invokeEraser()
+                    0-> {
+                        onToolSelectListener?.invokeHighlighter()
+                    }
+                    1-> {
+                        onToolSelectListener?.invokePen()
+                    }
+                    2-> {
+                        onToolSelectListener?.invokeEraser()
+                    }
                 }
+                hideColorPalette()
             }
         }
 
         binding?.widthSlider?.addOnChangeListener(object:OnChangeListener{
             @SuppressLint("RestrictedApi")
             override fun onValueChange(slider: Slider, value: Float, fromUser: Boolean) {
+                when(selected){
+                    0->{
+                        if(highlighterWidth != value.roundToInt())
+                            highlighterWidth = value.roundToInt()
+                    }
+                    1->{
+                        if(penWidth != value.roundToInt())
+                            penWidth = value.roundToInt()
+                    }
+                    2->{
+                        if(eraserWidth != value.roundToInt())
+                            eraserWidth = value.roundToInt()
+                    }
+                }
+
                 onPenSettingChangedListener?.invokeSliderMove(value.toInt())
                 binding?.penWidthIndicator?.text =value.toInt().toString()
             }
@@ -98,6 +128,11 @@ class PenselectFragment : Fragment() {
             override fun onColorSelected(color: Int, fromUser: Boolean) {
                 binding?.colorPickerButton?.backgroundTintList = ColorStateList.valueOf(color)
                 onPenSettingChangedListener?.invokeColorChange(color)
+
+                if(selected == 0)
+                    highlighterColor = color
+                else if(selected == 1)
+                    penColor = color
             }
 
         })
@@ -379,6 +414,24 @@ class PenselectFragment : Fragment() {
         selected = item
         if(item!=-1)
             kept = item
+
+        when(item){
+            0->{
+                binding?.widthSlider?.value = highlighterWidth.toFloat()
+                binding?.colorPickerButton?.visibility = View.VISIBLE
+                binding?.colorPicker?.selectByHsvColor(highlighterColor)
+            }
+            1->{
+                binding?.widthSlider?.value = penWidth.toFloat()
+                binding?.colorPickerButton?.visibility = View.VISIBLE
+                binding?.colorPicker?.selectByHsvColor(penColor)
+            }
+            2->{
+                binding?.widthSlider?.value = eraserWidth.toFloat()
+                binding?.colorPickerButton?.visibility = View.INVISIBLE
+            }
+        }
+
     }
 
     fun setPentoolActive(active:Boolean){

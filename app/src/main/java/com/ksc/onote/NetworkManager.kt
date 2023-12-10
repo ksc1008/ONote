@@ -7,6 +7,8 @@ import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.ksc.onote.authorization.AuthorizeManager
+import kotlinx.serialization.json.JsonObject
+import org.json.JSONArray
 import org.json.JSONObject
 
 interface NetworkGetListener<T> {
@@ -100,6 +102,124 @@ class NetworkManager private constructor(context: Context) {
                     "Error Response code: " + error.networkResponse.statusCode
                 )
                 listener.getResult(false)
+            }
+        }
+        requestQueue.add(request)
+    }
+
+    fun postUpdateAllNote(name: String, note: JsonObject, listener: NetworkGetListener<Boolean?>) {
+        val url = dbURL + "api/database"
+        val jsonParams: MutableMap<String?, Any?> = HashMap()
+        val key = AuthorizeManager.getInstance()?.getAccessToken()
+        if(key==null){
+            listener.getResult(null)
+            return
+        }
+
+        //jsonParams["old_page_name"] = null
+        jsonParams["access_token"] = key
+        val page =HashMap<String?,Any?>()
+        page["name"] = name
+        page["data"] = note
+        jsonParams["new_pages"] = listOf(page)
+        val obj = JSONObject(jsonParams)
+        val request = JsonObjectRequest(
+            Request.Method.POST, url, obj,
+            { response ->
+                Log.d(
+                    "$TAG: ",
+                    "somePostRequest Response : $response"
+                )
+                if(checkResponseSuccess(response)){
+                    AuthorizeManager.getInstance()?.setAccessToken(response.getString("access_token"))
+                    listener.getResult(true)
+                }
+                else{
+                    listener.getError("Error")
+                    listener.getResult(false)
+                }
+            }
+        ) { error ->
+            if (null != error.networkResponse) {
+                Log.d(
+                    "$TAG: ",
+                    "Error Response code: " + error.networkResponse.statusCode
+                )
+                listener.getResult(false)
+            }
+        }
+        requestQueue.add(request)
+    }
+
+    fun postUpdateNote(name: String, note: JsonObject, listener: NetworkGetListener<Boolean?>) {
+        val url = dbURL + "api/database/page"
+        val jsonParams: MutableMap<String?, Any?> = HashMap()
+        val key = AuthorizeManager.getInstance()?.getAccessToken()
+        if(key==null){
+            listener.getResult(null)
+            return
+        }
+
+        jsonParams["old_page_name"] = null
+        jsonParams["access_token"] = key
+        val page =HashMap<String?,Any?>()
+        page["name"] = name+"11"
+        page["data"] = note
+        jsonParams["new_page"] = page
+        val obj = JSONObject(jsonParams)
+        val request = JsonObjectRequest(
+            Request.Method.POST, url, obj,
+            { response ->
+                Log.d(
+                    "$TAG: ",
+                    "somePostRequest Response : $response"
+                )
+                if(checkResponseSuccess(response)){
+                    AuthorizeManager.getInstance()?.setAccessToken(response.getString("access_token"))
+                    listener.getResult(true)
+                }
+                else{
+                    listener.getError("Error")
+                    listener.getResult(false)
+                }
+            }
+        ) { error ->
+            if (null != error.networkResponse) {
+                Log.d(
+                    "$TAG: ",
+                    "Error Response code: " + error.networkResponse.statusCode
+                )
+                listener.getResult(false)
+            }
+        }
+        requestQueue.add(request)
+    }
+
+    fun getRequestNameList(listener: NetworkGetListener<JSONArray>) {
+        val url = dbURL + "api/database/namelist"
+        val key = AuthorizeManager.getInstance()?.getAccessToken()
+        val request = JsonObjectRequest(
+            Request.Method.GET, "$url?access_token=$key", null,
+            { response ->
+                Log.d(
+                    "$TAG: ",
+                    "somePostRequest Response : $response"
+                )
+                if(checkResponseSuccess(response)){
+                    AuthorizeManager.getInstance()?.setAccessToken(response.getString("access_token"))
+                    listener.getResult(response.getJSONObject("response").getJSONArray("namelist"))
+                }
+                else{
+                    listener.getError(response.getJSONObject("response").getString("message"))
+                }
+            }
+        ) { error ->
+            if (null != error.networkResponse) {
+                Log.d(
+                    "$TAG: ",
+                    "Error Response code: " + error.networkResponse.statusCode
+                )
+                listener.getError("Error")
             }
         }
         requestQueue.add(request)

@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.PopupMenu
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
@@ -16,6 +17,7 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.ksc.onote.databinding.ActivityMainBinding
+import org.json.JSONArray
 import java.lang.Exception
 
 
@@ -23,12 +25,11 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
-    private var uri:Uri? = null
     val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         if( it.resultCode == RESULT_OK) {
-            uri = it.data?.data
+            val uri = it.data?.data
             Log.d(TAG,uri.toString())
-            startCanvas()
+            startCanvas(uri)
         }
     }
 
@@ -46,11 +47,30 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
 
         binding.fab.setOnClickListener {
-            showFileChooser()
+            val popupMenu:PopupMenu = PopupMenu(applicationContext,it)
+            menuInflater.inflate(R.menu.create_note_menu,popupMenu.menu)
+            popupMenu.setOnMenuItemClickListener (object:PopupMenu.OnMenuItemClickListener{
+                override fun onMenuItemClick(p0: MenuItem?): Boolean {
+                    when(p0?.itemId){
+                        R.id.action_new_node_menu->{
+                            startCanvas(null)
+                            return true
+                        }
+
+                        R.id.action_from_pdf_menu->{
+                            showFileChooser()
+                            return true
+                        }
+                    }
+                    return false
+                }
+
+            })
+            popupMenu.show()
         }
     }
 
-    private fun startCanvas(){
+    private fun startCanvas(uri:Uri?){
         val switchActivityIntent = Intent(this, CanvasActivity::class.java)
 
         if(uri!= null){
@@ -70,16 +90,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun createEmpty(){
+
+    }
+
+
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
             R.id.action_settings -> true
             else -> super.onOptionsItemSelected(item)

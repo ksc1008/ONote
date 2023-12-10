@@ -4,9 +4,11 @@ import android.content.ContentValues.TAG
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -27,18 +29,14 @@ class LoginActivity : ComponentActivity() {
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
 
         if(!task.isSuccessful){
-            Toast.makeText(this,"Failed login",Toast.LENGTH_SHORT)
+            Toast.makeText(this,"Failed login",Toast.LENGTH_LONG).show()
             return@registerForActivityResult
         }
 
         try {
             val account = task.getResult(ApiException::class.java)
 
-            // 이름, 이메일 등이 필요하다면 아래와 같이 account를 통해 각 메소드를 불러올 수 있다.
-            val userName = account.givenName
-            val serverAuth = account.serverAuthCode
             account.idToken
-            Log.d(TAG,"Username : ${account.givenName}")
             Log.d(TAG,"Auth Code : ${account.serverAuthCode}")
 
 
@@ -47,6 +45,7 @@ class LoginActivity : ComponentActivity() {
 
         } catch (e: ApiException) {
             Log.e(TAG, e.stackTraceToString())
+            Toast.makeText(this,"Failed login",Toast.LENGTH_LONG).show()
         }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,6 +59,10 @@ class LoginActivity : ComponentActivity() {
         }
 
         AuthorizeManager.getInstance(this)
+
+        if(!trySilentLogin()){
+            binding.loginButton.visibility = View.VISIBLE
+        }
     }
 
     private fun getGoogleClient(): GoogleSignInClient {
@@ -72,13 +75,12 @@ class LoginActivity : ComponentActivity() {
     }
 
     private fun requestGoogleLogin() {
-        googleSignInClient.signOut()
         val signInIntent = googleSignInClient.signInIntent
         googleAuthLauncher.launch(signInIntent)
     }
 
     private fun getAccessToken(autoToken:String):String{
-        GlobalScope.launch {
+        lifecycleScope.launch {
             NetworkManager.getInstance(baseContext)?.getAccessToken(autoToken, listener = object:NetworkGetListener<Boolean>{
                 override fun getResult(`object`: Boolean) {
                     Log.d(TAG,"Result : $`object`")
@@ -95,5 +97,40 @@ class LoginActivity : ComponentActivity() {
             })
         }
         return ""
+    }
+
+    private fun trySilentLogin():Boolean{
+        val googleSignInOption = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestEmail().requestProfile()
+            .requestServerAuthCode(getString(R.string.google_login_client_id))
+            .build()
+        val account = GoogleSignIn.getLastSignedInAccount(this)
+        for(scope in googleSignInOption.scopes){
+            if(!GoogleSignIn.hasPermissions(account,scope)){
+                return false
+            }
+        }
+        googleSignInClient.silentSignIn().addOnCompleteListener {
+            if(!it.isSuccessful){
+                Toast.makeText(this,"Failed login",Toast.LENGTH_LONG).show()
+                binding.loginButton.visibility = View.VISIBLE
+                return@addOnCompleteListener
+            }
+            try {
+                val result = it.getResult(ApiException::class.java)
+
+                Log.d(TAG,"Auth Code : ${result.serverAuthCode}")
+
+
+                getAccessToken(result.serverAuthCode.toString())
+                return@addOnCompleteListener
+
+            } catch (e: ApiException) {
+                Log.e(TAG, e.stackTraceToString())
+                Toast.makeText(this,"Failed login",Toast.LENGTH_LONG).show()
+                binding.loginButton.visibility = View.VISIBLE
+            }
+        }
+        return true
     }
 }

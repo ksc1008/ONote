@@ -111,7 +111,8 @@ class CanvasDrawer: ViewModel() {
     }
 
     fun startPlaceImage(bitmap:Bitmap,moveX:Float, moveY:Float){
-        placingBitmap = CanvasBitmap(moveX+viewPoint.x,moveY+viewPoint.y,bitmap.copy(bitmap.config,true))
+        placingBitmap = CanvasBitmap(moveX+viewPoint.x,moveY+viewPoint.y,
+            Bitmap.createScaledBitmap(bitmap,(bitmap.width/scaleFactor).toInt(),(bitmap.height/scaleFactor).toInt(),true))
         currentDrawMod = DrawMod.IMAGEDOWN
     }
 
@@ -163,16 +164,19 @@ class CanvasDrawer: ViewModel() {
 
     private fun drawVisibleCanvasBackgrounds(canvas:Canvas, canvasViewModel:CanvasViewModel){
         for(c in canvasViewModel.visibleCanvasList.value?: listOf()){
+            val slice = c.canvasPaper.sliceCnt
             val bg = c.getBackground((viewWidth/scaleFactor).toInt())
-            val bgScaleFactor = c.width/bg.width
 
-            val left = max(viewPoint.x.toInt(),c.x)
-            val right = min(viewPoint.x.toInt() + (viewWidth/scaleFactor).toInt(), c.x+c.width)
-            val top = max(viewPoint.y.toInt(),c.y)
-            val bottom = min(viewPoint.y.toInt() + (viewHeight/scaleFactor).toInt(), c.y+c.height)
-            val area = Rect((left-c.x)/bgScaleFactor,(top-c.y)/bgScaleFactor,(right-c.x)/bgScaleFactor,(bottom-c.y)/bgScaleFactor)
-            val dest = Rect(left,top,right,bottom)
-            canvas.drawBitmap(bg,area,dest,null)
+            val imgTop = c.y
+            val viewTop = viewPoint.y
+            val viewBottom = viewPoint.y + (viewHeight/scaleFactor)
+
+            val startIdx = max(((viewTop-imgTop)/c.height * slice).toInt(),0)
+            val endIdx = min(((viewBottom) /c.height*slice).toInt(),slice-1)
+
+            for(i in startIdx..endIdx) {
+                canvas.drawBitmap(bg[i], c.x.toFloat(), (c.y+(c.height/slice)*i).toFloat(),null)
+            }
 
             //canvas.drawBitmap(bg,c.x.toFloat(),c.y.toFloat(),null)
         }
@@ -228,7 +232,6 @@ class CanvasDrawer: ViewModel() {
                 canvasViewModel.activeCanvas?.redraw()
                 drawVisibleCanvases(canvas, canvasViewModel)
                 currentDrawMod = DrawMod.IDLE
-
             }
         }
         canvas.restore()

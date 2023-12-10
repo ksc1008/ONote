@@ -11,7 +11,7 @@ import java.util.Base64
 object Base64Tool {
     fun encodeImage(bm: Bitmap, format:Bitmap.CompressFormat = Bitmap.CompressFormat.PNG): String? {
         val baos = ByteArrayOutputStream()
-        bm.compress(format, 90, baos)
+        bm.compress(format, 100, baos)
         val b = baos.toByteArray()
         val encoder = Base64.getEncoder()
 

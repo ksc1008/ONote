@@ -14,6 +14,7 @@ class CanvasBitmap(_x:Float, _y:Float, private val bitmap:Bitmap) {
         bitmap.height
     }
 
+
     var x:Float
         private set
     var y:Float

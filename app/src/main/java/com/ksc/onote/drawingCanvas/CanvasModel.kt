@@ -5,26 +5,23 @@ import androidx.navigation.NavType
 import com.google.gson.Gson
 import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
-import java.io.Serializable
+import kotlinx.serialization.Serializable
 
-@Parcelize
-data class ImageData(val img:String, val x:Float, val y:Float):Parcelable
-@Parcelize
+@Serializable
+data class ImageData(val img:String, val x:Float, val y:Float)
+@Serializable
 data class StrokeData(val x:Float, val y:Float, val width:Float, val color:Int,
-                      val points:List<StrokePointData>):Parcelable
-@Parcelize
+                      val points:List<StrokePointData>)
+@Serializable
 data class CanvasModel(val width:Int, val height:Int, val penStrokes:List<StrokeData>,
                        val highlightStrokes:List<StrokeData>, val images:List<ImageData>,
-                       val hasBG:Boolean, val bg:String): Parcelable
+                       val hasBG:Boolean, val bg:String)
 
-@Parcelize
-data class NoteModel(val name:String, val data1:String, val data2:String, val canvases:List<CanvasModel>):Parcelable
+@Serializable
+data class NoteModel(val name:String, val data1:String, val data2:String, val canvases:List<CanvasModel>)
 
-@Parcelize
-data class StrokePointData(val x:Int, val y:Int):Parcelable
+@Serializable
+data class StrokePointData(val x:Int, val y:Int)
 
 object CanvasSerializer{
-        fun toJson(note:NoteModel):String{
-            return Gson().toJson(note)
-        }
 }

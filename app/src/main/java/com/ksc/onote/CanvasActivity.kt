@@ -1,7 +1,6 @@
 package com.ksc.onote
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.RectF
 import android.net.Uri
@@ -19,21 +18,13 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import com.ksc.onote.authorization.AuthorizeManager
 import com.ksc.onote.calculator.CalculatorViewModel
 import com.ksc.onote.canvasViewUI.OnAreaAssignedListener
 import com.ksc.onote.canvasViewUI.PenselectFragment
 import com.ksc.onote.databinding.ActivityCanvasBinding
 import com.ksc.onote.drawingCanvas.CanvasDrawer
-import com.ksc.onote.drawingCanvas.CanvasModel
-import com.ksc.onote.drawingCanvas.CanvasSerializer
 import com.ksc.onote.drawingCanvas.CanvasViewModel
-import com.ksc.onote.drawingCanvas.NoteModel
 import com.ksc.onote.formulaViewer.CalculatorFragment
 import com.ksc.onote.formulaViewer.FormulaFragment
 import com.ksc.onote.formulaViewer.FormulaViewModel
@@ -43,10 +34,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import org.json.JSONObject
-import java.io.File
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 import kotlin.math.abs
-import kotlin.reflect.typeOf
 
 
 class CanvasActivity : AppCompatActivity() {
@@ -292,10 +283,32 @@ class CanvasActivity : AppCompatActivity() {
         })
 
         binding.btnSave.setOnClickListener{
-            val json = CanvasSerializer.toJson(canvasViewModel.toData())
-            val gson:Gson = GsonBuilder().setPrettyPrinting().create()
-            val jelem: JsonElement = gson.fromJson(json, JsonElement::class.java)
-            val jobj:JsonObject = jelem.asJsonObject
+            var ctime = System.currentTimeMillis()
+            scope.launch {
+                val data = canvasViewModel.toDataAsync()
+                Log.d("Json Parse","To data, elapsed: ${System.currentTimeMillis()-ctime}ms")
+                ctime = System.currentTimeMillis()
+                val jelem = Json.encodeToJsonElement(data)
+                //val gson:Gson = GsonBuilder().setPrettyPrinting().create()
+                //Log.d("Json Parse","elapsed: ${System.currentTimeMillis()-ctime}ms")
+                //val jelem: JsonElement = gson.fromJson(json, JsonElement::class.java)
+                val jobj:kotlinx.serialization.json.JsonObject = jelem.jsonObject
+                Log.d("Json Parse","To jsonObject, elapsed: ${System.currentTimeMillis()-ctime}ms")
+                Log.d("Json Parse","size: ${jobj.toString().length/1024}KB")
+
+                NetworkManager.getInstance()?.postUpdateNote("New Note2",jobj,object:NetworkGetListener<Boolean?>{
+                    override fun getResult(`object`: Boolean?) {
+                        if(`object` == null || `object` == false)
+                            Log.e("Upload Note","Failed to upload note.")
+                        else
+                            Log.d("Upload Note","Succeed!")
+                    }
+
+                    override fun getError(message: String) {
+                    }
+
+                })
+            }
         }
 
         AuthorizeManager.getInstance(this)

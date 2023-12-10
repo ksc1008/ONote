@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.ksc.onote.MainActivity">
+    <item
+        android:id="@+id/action_new_node_menu"
+        android:title="새 노트" />
+    <item
+        android:id="@+id/action_from_pdf_menu"
+        android:title="PDF 불러오기" />
+</menu>
