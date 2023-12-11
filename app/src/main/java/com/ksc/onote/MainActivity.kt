@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity() {
             })
             popupMenu.show()
         }
+        NetworkManager.getInstance(this)
     }
 
     private fun startCanvas(uri:Uri?){

@@ -152,6 +152,10 @@ class NetworkManager private constructor(context: Context) {
     }
 
     fun postUpdateNote(name: String, note: JsonObject, listener: NetworkGetListener<Boolean?>) {
+        Log.d(
+            "$TAG: ",
+            "Post Update Note"
+        )
         val url = dbURL + "api/database/page"
         val jsonParams: MutableMap<String?, Any?> = HashMap()
         val key = AuthorizeManager.getInstance()?.getAccessToken()
@@ -196,8 +200,17 @@ class NetworkManager private constructor(context: Context) {
     }
 
     fun getRequestNameList(listener: NetworkGetListener<JSONArray>) {
+        Log.d(
+            "$TAG: ",
+            "Requesting Name List"
+        )
         val url = dbURL + "api/database/namelist"
         val key = AuthorizeManager.getInstance()?.getAccessToken()
+        if(key==null){
+            Log.e(TAG,"No Key")
+            listener.getResult(JSONArray())
+            return
+        }
         val request = JsonObjectRequest(
             Request.Method.GET, "$url?access_token=$key", null,
             { response ->
@@ -223,6 +236,10 @@ class NetworkManager private constructor(context: Context) {
             }
         }
         requestQueue.add(request)
+        Log.d(
+            "$TAG: ",
+            "Added Queue"
+        )
     }
 
     companion object {
