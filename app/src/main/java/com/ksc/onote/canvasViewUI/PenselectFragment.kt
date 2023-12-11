@@ -449,5 +449,4 @@ class PenselectFragment : Fragment() {
     fun setOnPenSettingChangedListener(listener: OnPenSettingChangedListener){
         onPenSettingChangedListener = listener
     }
-
 }

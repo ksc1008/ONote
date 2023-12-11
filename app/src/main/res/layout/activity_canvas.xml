@@ -6,13 +6,27 @@
     android:layout_height="match_parent"
     tools:context=".CanvasActivity">
 
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:fitsSystemWindows="true">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="64dp" />
+
+    </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginBottom="20dp"
-        android:layout_marginTop="20dp">
+        android:layout_marginTop="64dp">
 
         <com.ksc.onote.canvasViewUI.MyCanvasView
             android:id="@+id/canvas"
@@ -32,6 +46,7 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <Button
+            android:visibility="invisible"
             android:id="@+id/btn_back"
             android:layout_width="70dp"
             android:layout_height="match_parent"
@@ -41,6 +56,7 @@
             android:layout_marginLeft="8dp" android:text="Back"/>
 
         <Button
+            android:visibility="invisible"
             android:id="@+id/btn_save"
             android:layout_width="70dp"
             android:layout_height="match_parent"
@@ -57,6 +73,7 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
+            android:visibility="invisible"
             android:id="@+id/ClearButton"
             android:layout_width="85dp"
             android:layout_height="match_parent"

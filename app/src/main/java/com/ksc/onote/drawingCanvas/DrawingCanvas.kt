@@ -18,6 +18,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import java.util.LinkedList
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 
@@ -34,19 +35,19 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
     private val bitmapList: LinkedList<CanvasBitmap> = LinkedList()
     private var bitmapCache: Bitmap? = null
 
-    class CanvasPaper(private val rows:Int, private val cols:Int, private val _width:Int, private val _height:Int, val hasBackground: Boolean = false, encoded:String? = null){
+    class CanvasPaper(private val rows:Int, private val cols:Int, private val _width:Int, private val _height:Int, var hasBackground: Boolean = false, encoded:String? = null){
         val sliceCnt:Int
         private val pathPoints:MutableList<MutableList<MutableList<CanvasStroke.StrokePoint>>> = mutableListOf()
         var documentSaving: Deferred<Unit>? = null
             private set
 
-        var bgBitmap: Bitmap
+        lateinit var bgBitmap: Bitmap
             private set
 
-        var bgBitmapFraction: List<Bitmap>
+        var bgBitmapFraction: List<Bitmap> = listOf()
             private set
 
-        private var bgLoaded = false
+        var bgLoaded = false
             private set
 
         var readyToSave = false
@@ -62,8 +63,8 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
         fun getHeight():Int{
             return _height
         }
-        private fun getIndex(x:Int, y:Int):Pair<Int,Int>{
-            return Pair((x.toFloat() / (_width.toFloat()/(cols-1))).toInt(),(y.toFloat() / (_height.toFloat()/(rows-1))).toInt())
+        private fun getIndex(x:Float, y:Float):Pair<Int,Int>{
+            return Pair((x / (_width.toFloat()/(cols-1))).toInt(),(y / (_height.toFloat()/(rows-1))).toInt())
         }
 
         fun addPoint(point: CanvasStroke.StrokePoint){
@@ -76,11 +77,11 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
         }
 
         fun checkOverlap(x:Int, y:Int):MutableList<CanvasStroke.StrokePoint>{
-            val idx = getIndex(x,y)
+            val idx = getIndex(x.toFloat(),y.toFloat())
             val list:MutableList<CanvasStroke.StrokePoint> = mutableListOf()
 
             for(p in pathPoints[idx.second][idx.first]){
-                if(p.pX == x && p.pY == y)
+                if(p.pX.toInt() == x && p.pY.toInt() == y)
                     list.add(p)
             }
             return list
@@ -106,6 +107,43 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
             bgBitmapFraction = l
             bgLoaded = true
         }
+        fun setBackground(encodedBitmap: String){
+            val decoded = Base64Tool.decodeImage(encodedBitmap)
+            if(decoded!=null) {
+                bgBitmap = decoded
+                bgBitmap.setHasMipMap(true)
+                val l: MutableList<Bitmap> = mutableListOf()
+                for (i in 0 until sliceCnt - 1) {
+                    l.add( Bitmap.createBitmap(
+                            bgBitmap,0,bgBitmap.height / sliceCnt * i,
+                            bgBitmap.width,bgBitmap.height / sliceCnt
+                        )
+                    )
+                    l.last().setHasMipMap(true)
+                }
+                l.add( Bitmap.createBitmap(
+                        bgBitmap,0,bgBitmap.height / sliceCnt * (sliceCnt - 1),
+                        bgBitmap.width,bgBitmap.height - (bgBitmap.height / sliceCnt) * (sliceCnt - 1)
+                    )
+                )
+                bgBitmapFraction = l
+                hasBackground = false
+            }
+            else{
+                bgBitmap = Bitmap.createBitmap(_width,_height, Bitmap.Config.RGB_565)
+                bgBitmap.eraseColor(Color.WHITE)
+                val l:MutableList<Bitmap> = mutableListOf()
+                for(i in 0 until sliceCnt){
+                    l.add(Bitmap.createBitmap(bgBitmap,0,bgBitmap.height/sliceCnt*i,bgBitmap.width,bgBitmap.height/sliceCnt))
+                    l.last().setHasMipMap(true)
+                }
+                bgBitmapFraction = l
+                bgLoaded = true
+            }
+            bgBitmap.recycle()
+            bgLoaded = true
+            readyToSave = true
+        }
 
         init{
             sliceCnt = _height / 300
@@ -120,22 +158,21 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
                 bgBitmap = Bitmap.createBitmap(_width,_height, Bitmap.Config.RGB_565)
                 bgBitmap.eraseColor(Color.WHITE)
                 val l:MutableList<Bitmap> = mutableListOf()
-                for(i in 0 until sliceCnt){
-                    l.add(Bitmap.createBitmap(bgBitmap,0,bgBitmap.height/sliceCnt*i,bgBitmap.width,bgBitmap.height/sliceCnt))
+                for (i in 0 until sliceCnt - 1) {
+                    l.add( Bitmap.createBitmap(
+                        bgBitmap,0,bgBitmap.height / sliceCnt * i,
+                        bgBitmap.width,bgBitmap.height / sliceCnt
+                    )
+                    )
                     l.last().setHasMipMap(true)
                 }
+                l.add( Bitmap.createBitmap(
+                    bgBitmap,0,bgBitmap.height / sliceCnt * (sliceCnt - 1),
+                    bgBitmap.width,bgBitmap.height - (bgBitmap.height / sliceCnt) * (sliceCnt - 1)
+                )
+                )
                 bgBitmapFraction = l
                 bgLoaded = true
-            }
-            else{
-                bgBitmap = Bitmap.createBitmap(_width,_height, Bitmap.Config.RGB_565)
-                bgBitmap.eraseColor(Color.WHITE)
-                val l:MutableList<Bitmap> = mutableListOf()
-                for(i in 0 until sliceCnt){
-                    l.add(Bitmap.createBitmap(bgBitmap,0,bgBitmap.height/sliceCnt*i,bgBitmap.width,bgBitmap.height/sliceCnt))
-                    l.last().setHasMipMap(true)
-                }
-                bgBitmapFraction = l
             }
 
             if(encoded!=null){
@@ -153,6 +190,7 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
                 documentSaving = async {
                     base64Bg = Base64Tool.encodeImage(bgBitmap)
                     readyToSave = true
+                    bgBitmap.recycle()
                 }
             }
         }
@@ -242,6 +280,22 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
         }
     }
 
+
+    private fun checkBitmapOverlapAndErase(x:Float, y:Float, radius: Float):Boolean{
+        var result = false
+        for(b in bitmapList){
+            val xn = max(b.x,min(x,(b.x+b.width)))
+            val yn = max(b.y,min(y,(b.y+b.height)))
+
+            val dx = xn - x
+            val dy = yn - y
+            if( (dx*dx+dy*dy) <= radius * radius ){
+                b.eraseArea(radius,x,y)
+                result = true
+            }
+        }
+        return result
+    }
     fun eraseCircle(radius:Float, eraseX:Float, eraseY:Float):Boolean{
         fun feasible(i:Int, j:Int):Boolean{
             if((eraseX-j).pow(2) + (eraseY-i).pow(2) > radius.pow(2))
@@ -272,6 +326,8 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
             }
         }
 
+        erased = erased || checkBitmapOverlapAndErase(eraseX,eraseY, radius)
+
         if(erased)
             return true
         return false
@@ -300,6 +356,8 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
 
 
     fun getBackground():List<Bitmap>{
+        if(!canvasPaper.bgLoaded)
+            return listOf()
         return canvasPaper.bgBitmapFraction
     }
 
@@ -315,21 +373,19 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
 
     companion object{
         fun deserialize(data:CanvasModel):DrawingCanvas{
-            val bg:Bitmap? = if(data.hasBG) null
-                else Base64Tool.decodeImage(data.bg)
 
-            val canvas = DrawingCanvas(data.width,data.height, bg!=null)
+            val canvas = DrawingCanvas(data.width,data.height, data.hasBG)
             for(p in data.penStrokes){
                 canvas.addStroke(p.x,p.y,MyCanvasView.DrawingToolMod.PEN,p.width,p.color)
                 for(sp in p.points){
-                    canvas.appendStroke(p.x,p.y,MyCanvasView.DrawingToolMod.PEN)
+                    canvas.appendStroke(sp.x,sp.y,MyCanvasView.DrawingToolMod.PEN)
                 }
             }
 
             for(h in data.highlightStrokes){
                 canvas.addStroke(h.x,h.y,MyCanvasView.DrawingToolMod.HIGHLIGHTER,h.width,h.color)
                 for(sp in h.points){
-                    canvas.appendStroke(h.x,h.y,MyCanvasView.DrawingToolMod.HIGHLIGHTER)
+                    canvas.appendStroke(sp.x,sp.y,MyCanvasView.DrawingToolMod.HIGHLIGHTER)
                 }
             }
 
@@ -355,8 +411,7 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
             for(b in canvas.bitmapList){
                 bList.add(CanvasBitmap.serialize(b))
             }
-            val bg:String
-            bg = if(!canvas.canvasPaper.hasBackground)
+            val bg:String = if(!canvas.canvasPaper.hasBackground)
                 ""
             else if(canvas.canvasPaper.readyToSave)
                 canvas.canvasPaper.base64Bg?:""

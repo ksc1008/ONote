@@ -1,5 +1,8 @@
 package com.ksc.onote.formulaViewer
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.fragment.app.Fragment
@@ -9,6 +12,7 @@ import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.webkit.WebView
+import android.widget.Toast
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
@@ -35,7 +39,6 @@ class FormulaFragment : Fragment() {
     }
 
     private val viewModel: FormulaViewModel by activityViewModels()
-    private val serverModel: ServerRequestViewModel by activityViewModels()
     private val viewInActivity: FragmentContainerView by lazy{
         requireActivity().findViewById(R.id.formulaFragmentContainer)
     }
@@ -90,6 +93,9 @@ class FormulaFragment : Fragment() {
         }
 
         binding?.btn1?.setOnClickListener{
+            (requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(
+                ClipData.newPlainText("latex code",viewModel.getFormula()))
+            Toast.makeText(requireContext(),"수식이 클립보드에 저장되었습니다.", Toast.LENGTH_SHORT).show()
             _onButtonClickedListener?.invokeButton1()
         }
         binding?.btn2?.setOnClickListener{
@@ -115,10 +121,6 @@ class FormulaFragment : Fragment() {
         })
         viewModel.setFormula("y=x^2 +3 x+1")
         binding?.formulaDisplay?.setDisplaySizeDp(8f)
-    }
-
-    private fun close(){
-        activity?.supportFragmentManager?.beginTransaction()?.remove(this)?.commit()
     }
 
     fun getFormulaImage():Bitmap?{

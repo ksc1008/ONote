@@ -1,5 +1,6 @@
 package com.ksc.onote
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,22 +9,43 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.ksc.onote.databinding.NoteMenuItemBinding
 
-class CustomAdapter(private var dataSet: Array<String>) :
+class CustomAdapter() :
     RecyclerView.Adapter<CustomAdapter.ViewHolder>() {
+
+    private var dataSet: Array<String> = NoteListModel.getInstance()!!.getNote()
+
+    interface OnItemClickListener{
+        fun invokeRemoveClick(name:String)
+        fun invokeOpenClick(name:String)
+    }
+
     lateinit var binding: NoteMenuItemBinding
+
+    private var mItemClickListener:OnItemClickListener? = null
 
     /**
      * Provide a reference to the type of views that you are using
      * (custom ViewHolder).
      */
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    class ViewHolder(view: View, listener:OnItemClickListener?) : RecyclerView.ViewHolder(view) {
         val textView: TextView
-        val removeButton: Button
+        private val removeButton: Button
+        val openButton: Button
+        var noteName:String = ""
 
         init {
             // Define click listener for the ViewHolder's View.
             removeButton = view.findViewById(R.id.remove_button)
+            openButton = view.findViewById(R.id.open_button)
             textView = view.findViewById(R.id.note_name)
+
+            openButton.setOnClickListener {
+                listener?.invokeOpenClick(noteName)
+            }
+
+            removeButton.setOnClickListener {
+                listener?.invokeRemoveClick(noteName)
+            }
         }
     }
 
@@ -38,12 +60,13 @@ class CustomAdapter(private var dataSet: Array<String>) :
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
         view.setLayoutParams(lp)
-        return ViewHolder(view)
+        return ViewHolder(view,mItemClickListener)
     }
 
     // Replace the contents of a view (invoked by the layout manager)
     override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
         viewHolder.textView.text = dataSet[position]
+        viewHolder.noteName = dataSet[position]
     }
 
     // Return the size of your dataset (invoked by the layout manager)
@@ -53,4 +76,15 @@ class CustomAdapter(private var dataSet: Array<String>) :
         dataSet = data
     }
 
+    fun setOnItemClickListener(listener: OnItemClickListener){
+        mItemClickListener = listener
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun removeFromList(name:String){
+        val ml = dataSet.toMutableList()
+        ml.remove(name)
+        dataSet = ml.toTypedArray()
+        notifyDataSetChanged()
+    }
 }

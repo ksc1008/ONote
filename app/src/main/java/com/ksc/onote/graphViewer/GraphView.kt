@@ -220,8 +220,10 @@ class GraphView(ctx: Context, attrs: AttributeSet?): WebView(ctx,attrs) {
             return Bitmap.createBitmap(1,1,Bitmap.Config.ARGB_8888)
         }
         else {
-            Bitmap.createScaledBitmap(screenshot!!,width,height,true)
-            return Bitmap.createScaledBitmap(screenshot!!,width,height,true)
+            val result = Bitmap.createScaledBitmap(screenshot!!,width,height,true).copy(screenshot!!.config,true)
+            screenshot?.recycle()
+
+            return result
         }
     }
 

@@ -3,6 +3,9 @@ package com.ksc.onote.drawingCanvas
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import androidx.compose.ui.geometry.CornerRadius
 import com.ksc.onote.utils.Base64Tool
 
 class CanvasBitmap(_x:Float, _y:Float, private val bitmap:Bitmap) {
@@ -29,13 +32,20 @@ class CanvasBitmap(_x:Float, _y:Float, private val bitmap:Bitmap) {
         viewCanvas?.drawBitmap(bitmap,x,y,paint)
     }
 
-    fun checkOverlap(checkX:Int, checkY:Int):Boolean{
-        return (checkX>=x && checkX<=(x+width)) && (checkY>=y && checkY<=(y+height))
-    }
-
     fun move(newX:Float, newY:Float){
         x = newX
         y = newY
+    }
+
+    fun eraseArea(radius: Float, eraseX:Float, eraseY:Float){
+        val canvas = Canvas(bitmap)
+        val eraser = Paint()
+
+        eraser.alpha = 0
+        eraser.isAntiAlias = true
+        eraser.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        eraser.style = Paint.Style.FILL
+        canvas.drawCircle(eraseX-x,eraseY-y,radius,eraser)
     }
 
     init {

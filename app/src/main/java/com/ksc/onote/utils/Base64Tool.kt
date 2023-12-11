@@ -22,7 +22,8 @@ object Base64Tool {
         return try {
             val decoder = Base64.getDecoder()
             val encodeByte: ByteArray = decoder.decode(encoded)
-            BitmapFactory.decodeByteArray(encodeByte, 0, encodeByte.size)
+            val decoded = BitmapFactory.decodeByteArray(encodeByte, 0, encodeByte.size)
+            decoded.copy(decoded.config,true)
         } catch(e: Exception){
             Log.e(ContentValues.TAG,e.toString())
             null

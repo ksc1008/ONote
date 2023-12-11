@@ -3,12 +3,13 @@ package com.ksc.onote.drawingCanvas
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.util.Log
 import java.util.Stack
 import kotlin.math.abs
 import kotlin.math.pow
 
 open class CanvasStroke(private var x:Float, private var y:Float, private val container: DrawingCanvas.CanvasPaper, private val paint: Paint){
-    open class StrokePoint(val pX:Int, val pY:Int, val path: CanvasStroke, val includeDrawing:Boolean = true){
+    open class StrokePoint(val pX:Float, val pY:Float, val path: CanvasStroke, val includeDrawing:Boolean = true){
         private lateinit var container:MutableList<StrokePoint>
         fun addToPiecewiseCanvas(cont:MutableList<StrokePoint>){
             container = cont
@@ -17,7 +18,7 @@ open class CanvasStroke(private var x:Float, private var y:Float, private val co
 
     private val drawThreshold = 2f
 
-    private val pathPoints: Stack<StrokePoint> = Stack()
+    protected val pathPoints: Stack<StrokePoint> = Stack()
     var removed = false
     var path: Path = Path()
     init{
@@ -26,11 +27,11 @@ open class CanvasStroke(private var x:Float, private var y:Float, private val co
         addStrokePath(x,y)
     }
 
-    private fun addStrokePath(newX:Float, newY:Float){
+    protected fun addStrokePath(newX:Float, newY:Float){
         path.lineTo(newX,newY)
         x = newX
         y = newY
-        val sp = StrokePoint(newX.toInt(), newY.toInt(), this)
+        val sp = StrokePoint(newX, newY, this)
 
         addDividedPathPoint(sp)
         pathPoints.push(sp)
@@ -54,16 +55,18 @@ open class CanvasStroke(private var x:Float, private var y:Float, private val co
         }
     }
 
-    open fun appendStroke(newX:Float, newY:Float){
-        if(newX<0 || newX >= container.getWidth() || newY<0 || newY>= container.getHeight())
+    fun appendStroke(newX:Float, newY:Float){
+        if(newX<0 || newX >= container.getWidth() || newY<0 || newY>= container.getHeight()) {
             return
-        if(abs(newX-x) + abs(newY-x) < drawThreshold)
+        }
+        if(abs(newX-x) + abs(newY-x) < drawThreshold) {
             return
+        }
         addStrokePath(newX,newY)
     }
 
 
-    open fun removeStroke(){
+    fun removeStroke(){
         removed = true
         while(pathPoints.isNotEmpty()){
             container.removePathPoint(pathPoints.last())
@@ -80,7 +83,8 @@ open class CanvasStroke(private var x:Float, private var y:Float, private val co
             val l:MutableList<StrokePointData> = mutableListOf()
             for(p in canvasStroke.pathPoints){
                 if(p.includeDrawing){
-                    l.add(StrokePointData(p.pX,p.pX))
+                    l.add(0,StrokePointData(p.pX,p.pY))
+                    //Log.d("test Stroke Data save trace","${p.pY}")
                 }
             }
             return StrokeData(canvasStroke.x,canvasStroke.y, canvasStroke.paint.strokeWidth,canvasStroke.paint.color,l)

@@ -16,7 +16,7 @@
         <ImageButton
             android:id="@+id/btn1"
             android:layout_margin="5dp"
-            android:src="@drawable/func"
+            android:src="@drawable/copy"
             android:scaleType="centerInside"
             android:layout_width="35dp"
             android:background="#00000000"

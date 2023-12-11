@@ -15,7 +15,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.ksc.onote.authorization.AuthorizeManager
 import com.ksc.onote.databinding.ActivityLoginBinding
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 
@@ -61,8 +60,16 @@ class LoginActivity : ComponentActivity() {
         AuthorizeManager.getInstance(this)
 
         if(!trySilentLogin()){
-            binding.loginButton.visibility = View.VISIBLE
+            letReLogin()
         }
+    }
+
+    private fun letReLogin(){
+        binding.loginButton.visibility = View.VISIBLE
+    }
+
+    private fun hideButton(){
+        binding.loginButton.visibility = View.INVISIBLE
     }
 
     private fun getGoogleClient(): GoogleSignInClient {
@@ -81,7 +88,7 @@ class LoginActivity : ComponentActivity() {
 
     private fun getAccessToken(autoToken:String):String{
         lifecycleScope.launch {
-            NetworkManager.getInstance(baseContext)?.getAccessToken(autoToken, listener = object:NetworkGetListener<Boolean>{
+            NetworkManager.getInstance(baseContext)?.getRequestLogin(autoToken, listener = object:NetworkGetListener<Boolean>{
                 override fun getResult(`object`: Boolean) {
                     Log.d(TAG,"Result : $`object`")
                     if(`object`){
@@ -92,6 +99,8 @@ class LoginActivity : ComponentActivity() {
                 }
 
                 override fun getError(message: String) {
+                    Toast.makeText(this@LoginActivity,"Failed login",Toast.LENGTH_LONG).show()
+                    letReLogin()
                 }
 
             })

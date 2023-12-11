@@ -1,6 +1,7 @@
 package com.ksc.onote
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.nfc.Tag
 import android.os.Bundle
 import android.util.Log
@@ -10,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -19,7 +21,7 @@ import com.ksc.onote.databinding.NoteMenuItemBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONArray
-
+import org.json.JSONObject
 
 
 class FirstFragment : Fragment() {
@@ -28,7 +30,7 @@ class FirstFragment : Fragment() {
     private var _binding: FragmentFirstBinding? = null
     private var recyclerView:RecyclerView? = null
     private var recyclerViewAdapter:CustomAdapter? = null
-
+    private var deleteRequestCount = 0
 
     private val binding get() = _binding!!
 
@@ -45,15 +47,67 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.buttonFirst.setOnClickListener {
-            requestList()
-        }
-
         recyclerView = binding.noteList
         val linearLayoutManager = LinearLayoutManager(activity)
         recyclerView?.layoutManager = linearLayoutManager
-        recyclerViewAdapter = CustomAdapter(noteList)
+        recyclerViewAdapter = CustomAdapter()
         recyclerView?.adapter = recyclerViewAdapter
+
+
+
+        NoteListModel.getInstance()?.setNoteListListener(object: NoteListModel.NoteListListener{
+            @SuppressLint("NotifyDataSetChanged")
+            override fun invokeListChange() {
+                recyclerViewAdapter?.setDataset(NoteListModel.getInstance()!!.getNote())
+                recyclerViewAdapter?.notifyDataSetChanged()
+            }
+        })
+
+        recyclerViewAdapter?.setOnItemClickListener(object: CustomAdapter.OnItemClickListener{
+            override fun invokeRemoveClick(name: String) {
+                deleteRequestCount++
+                NetworkManager.getInstance()?.deleteRequest(name,object:NetworkGetListener<Boolean>{
+
+                    override fun getResult(`object`: Boolean) {
+                        NoteListModel.getInstance()?.getNote()
+                        deleteRequestCount--
+                    }
+                    override fun getError(message: String) {
+                        Log.e("Delete Note",message)
+                        deleteRequestCount--
+                    }
+
+
+                })
+                recyclerViewAdapter?.removeFromList(name)
+            }
+
+            override fun invokeOpenClick(name: String) {
+                NetworkManager.getInstance()?.readRequest(name, object:NetworkGetListener<JSONObject?>{
+                    override fun getResult(`object`: JSONObject?) {
+                        val switchActivityIntent = Intent(requireContext(), CanvasActivity::class.java)
+
+                        val obj = `object`?.getJSONObject("response")?.getJSONObject("page")?.getJSONObject("data")
+                        if(obj == null){
+                            Toast.makeText(requireContext(),"Invalid Data",Toast.LENGTH_LONG).show()
+                            return
+                        }
+                        switchActivityIntent.putExtra("Type","from_json")
+                        switchActivityIntent.putExtra("data",obj.toString())
+
+                        switchActivityIntent.putExtra("Name",name)
+                        startActivity(switchActivityIntent)
+                    }
+
+                    override fun getError(message: String) {
+                        Toast.makeText(requireContext(),"Failed to open note.",Toast.LENGTH_LONG).show()
+                    }
+
+                })
+            }
+        })
+
+        NoteListModel.getInstance()?.renewNoteList()
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -81,35 +135,6 @@ class FirstFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    private fun requestList(){
-        activity?.lifecycleScope?.launch {
-            NetworkManager.getInstance()?.getRequestNameList(object:NetworkGetListener<JSONArray>{
-                override fun getResult(`object`: JSONArray) {
-                    val len = `object`.length()
-                    val list = mutableListOf<String>()
-                    for(i in 0 until len){
-                        Log.d("Get Note List",`object`.getString(i))
-                        list.add(`object`.getString(i))
-                    }
-                    updateNoteList(list)
-                }
-
-                override fun getError(message: String) {
-                    Log.e("Get Note List",message)
-
-                }
-
-            })?: kotlin.run {
-                Log.e(TAG,"No Network Manager")
-            }
-        }
-        val list = mutableListOf<String>()
-        for(i in 0 until 10){
-            list.add("Item $i")
-        }
-        updateNoteList(list)
     }
 
     companion object{

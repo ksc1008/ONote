@@ -3,6 +3,7 @@ package com.ksc.onote.drawingCanvas
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.PointF
 import androidx.lifecycle.ViewModel
 import com.ksc.onote.canvasViewUI.MyCanvasView
@@ -18,7 +19,8 @@ class CanvasDrawer: ViewModel() {
     var scaleFactor = 1f
         set(value) { field = max(0.4f, min(value, 2.0f))}
 
-    private var currentPenWidth:Float = 10f
+    var currentPenWidth:Float = 10f
+        private set
     private var currentPenColor:Int = Color.BLACK
 
     private var handHoldPoint= PointF(0f,0f)
@@ -141,10 +143,10 @@ class CanvasDrawer: ViewModel() {
         canvasViewModel.activeCanvas?.appendStroke(point.x,point.y,currentPentool)
     }
 
-    fun eraseCircle(radius:Float, eraseX:Float, eraseY:Float, canvasViewModel:CanvasViewModel){
+    fun eraseCircle(eraseX:Float, eraseY:Float, canvasViewModel:CanvasViewModel){
         val point = globalToCanvasCoordinate(getAdjustedPoint(eraseX,eraseY),canvasViewModel.activeCanvas)
 
-        val result = canvasViewModel.activeCanvas?.eraseCircle(radius,point.x,point.y)?:false
+        val result = canvasViewModel.activeCanvas?.eraseCircle(currentPenWidth*4,point.x,point.y)?:false
         if(result){
             currentDrawMod = DrawMod.RESET
         }
@@ -172,8 +174,18 @@ class CanvasDrawer: ViewModel() {
             val startIdx = max(((viewTop-imgTop)/c.height * slice).toInt(),0)
             val endIdx = min(((viewBottom) /c.height*slice).toInt(),slice-1)
 
-            for(i in startIdx..endIdx) {
-                canvas.drawBitmap(bg[i], c.x.toFloat(), (c.y+(c.height/slice)*i).toFloat(),null)
+            if(bg.isEmpty()){
+                canvas.drawRect(c.x.toFloat(),c.y.toFloat(),(c.x+c.width).toFloat(),(c.y+c.height).toFloat(), Paint().apply { color = Color.WHITE })
+            }
+            else {
+                for (i in startIdx..endIdx) {
+                    canvas.drawBitmap(
+                        bg[i],
+                        c.x.toFloat(),
+                        (c.y + (c.height / slice) * i).toFloat(),
+                        null
+                    )
+                }
             }
 
             //canvas.drawBitmap(bg,c.x.toFloat(),c.y.toFloat(),null)

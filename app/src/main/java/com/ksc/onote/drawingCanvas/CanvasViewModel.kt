@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ksc.onote.utils.Base64Tool
 import com.ksc.onote.utils.PDFTool
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -20,6 +21,8 @@ import kotlin.math.min
 class CanvasViewModel:ViewModel() {
 
     var noteName:String = ""
+
+    var isNew:Boolean = true
 
     var canvasList: MutableLiveData<MutableList<DrawingCanvas>>
     = MutableLiveData<MutableList<DrawingCanvas>>(mutableListOf())
@@ -40,6 +43,8 @@ class CanvasViewModel:ViewModel() {
     var visibleIdxEnd = -1
         private set
 
+    var started = false
+
     suspend fun toDataAsync():NoteModel{
         val list:MutableList<CanvasModel> = mutableListOf()
         for(c in canvasList.value!!){
@@ -52,6 +57,25 @@ class CanvasViewModel:ViewModel() {
     fun createEmpty(canvasWidth:Int, canvasHeight:Int){
         clearData()
         canvasList.value?.add(DrawingCanvas(canvasWidth,canvasHeight))
+        started = true
+        calculateCanvasPositions(50)
+    }
+
+    fun createFromData(note:NoteModel){
+        clearData()
+        for(c in note.canvases){
+            canvasList.value?.add(DrawingCanvas.deserialize(c))
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+
+            for(i in 0 until note.canvases.size) {
+                val data = canvasList.value?.getOrNull(i) ?: break
+                if(note.canvases[i].hasBG){
+                    data.canvasPaper.setBackground(note.canvases[i].bg)
+                }
+            }
+            started = true
+        }
         calculateCanvasPositions(50)
     }
 
@@ -113,6 +137,7 @@ class CanvasViewModel:ViewModel() {
             }
             descriptor.close()
             renderer.close()
+            started = true
         }
         calculateCanvasPositions(50)
     }

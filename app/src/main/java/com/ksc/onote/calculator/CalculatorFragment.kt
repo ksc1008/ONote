@@ -1,5 +1,8 @@
 package com.ksc.onote.calculator
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.fragment.app.Fragment
@@ -8,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
+import android.widget.Toast
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
@@ -81,6 +85,9 @@ class CalculatorFragment : Fragment() {
         }
 
         binding?.btn1?.setOnClickListener{
+            (requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(
+                ClipData.newPlainText("latex code",viewModel.calculationResult.value))
+            Toast.makeText(requireContext(),"계산결과가 클립보드에 저장되었습니다.", Toast.LENGTH_SHORT).show()
             _onButtonClickedListener?.invoke()
         }
 

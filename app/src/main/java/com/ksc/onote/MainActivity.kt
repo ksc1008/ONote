@@ -1,15 +1,18 @@
 package com.ksc.onote
 
-import android.app.Instrumentation.ActivityResult
 import android.content.ContentValues.TAG
+import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.EditText
 import android.widget.PopupMenu
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.navigation.findNavController
@@ -17,15 +20,13 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.ksc.onote.databinding.ActivityMainBinding
-import org.json.JSONArray
-import java.lang.Exception
 
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
-    val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+    private val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         if( it.resultCode == RESULT_OK) {
             val uri = it.data?.data
             Log.d(TAG,uri.toString())
@@ -36,6 +37,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        NetworkManager.getInstance(this)
 
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
@@ -68,17 +70,36 @@ class MainActivity : AppCompatActivity() {
             })
             popupMenu.show()
         }
-        NetworkManager.getInstance(this)
     }
 
-    private fun startCanvas(uri:Uri?){
+    fun startCanvas(uri:Uri?){
         val switchActivityIntent = Intent(this, CanvasActivity::class.java)
 
         if(uri!= null){
+            switchActivityIntent.putExtra("Name","note_pdf")
             switchActivityIntent.putExtra("Type","from_uri")
             switchActivityIntent.putExtra("uri",uri.toString())
         }
-        startActivity(switchActivityIntent)
+        var m_Text:String = ""
+        var result:Boolean = false
+
+        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+        builder.setTitle("생성할 노트 이름을 정해주세요.")
+        val input = EditText(this)
+        input.inputType = InputType.TYPE_TEXT_VARIATION_SHORT_MESSAGE
+        builder.setView(input)
+        builder.setPositiveButton("OK"
+        ) { dialog, which ->
+            result = true
+            m_Text = input.text.toString()
+            switchActivityIntent.putExtra("Name", m_Text)
+            startActivity(switchActivityIntent)
+        }
+        builder.setNegativeButton("Cancel",
+            { dialog, which -> result=false; dialog.cancel() })
+
+        builder.show()
+
     }
     private fun showFileChooser(){
         val intent = Intent(Intent.ACTION_GET_CONTENT)

@@ -21,7 +21,7 @@ data class CanvasModel(val width:Int, val height:Int, val penStrokes:List<Stroke
 data class NoteModel(val name:String, val data1:String, val data2:String, val canvases:List<CanvasModel>)
 
 @Serializable
-data class StrokePointData(val x:Int, val y:Int)
+data class StrokePointData(val x:Float, val y:Float)
 
 object CanvasSerializer{
 }
