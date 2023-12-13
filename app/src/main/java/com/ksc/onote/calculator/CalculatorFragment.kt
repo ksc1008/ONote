@@ -17,14 +17,15 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
-import com.ksc.onote.OnImageCopiedListener
 import com.ksc.onote.R
 import com.ksc.onote.databinding.FragmentCalculatorBinding
 import com.ksc.onote.formulaViewer.FormulaViewModel
 import com.ksc.onote.formulaViewer.FormulaViewer
 
 class CalculatorFragment : Fragment() {
-
+    interface OnImageCopiedListener {
+        fun invoke()
+    }
     interface OnViewDestroyedListener{
         fun invoke()
     }

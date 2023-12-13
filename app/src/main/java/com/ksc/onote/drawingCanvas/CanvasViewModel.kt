@@ -10,16 +10,20 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jakewharton.disklrucache.DiskLruCache
 import com.ksc.onote.utils.Base64Tool
 import com.ksc.onote.utils.PDFTool
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.min
 
 class CanvasViewModel:ViewModel() {
-
     var noteName:String = ""
 
     var isNew:Boolean = true
@@ -45,7 +49,10 @@ class CanvasViewModel:ViewModel() {
 
     var started = false
 
-    suspend fun toDataAsync():NoteModel{
+    suspend fun toDataAsync():NoteModel?{
+        if(!started){
+            return null
+        }
         val list:MutableList<CanvasModel> = mutableListOf()
         for(c in canvasList.value!!){
             list.add(DrawingCanvas.serialize(c))
@@ -57,21 +64,29 @@ class CanvasViewModel:ViewModel() {
     fun createEmpty(canvasWidth:Int, canvasHeight:Int){
         clearData()
         canvasList.value?.add(DrawingCanvas(canvasWidth,canvasHeight))
+        canvasList.value?.last()?.sleep()
         started = true
         calculateCanvasPositions(50)
     }
 
     fun createFromData(note:NoteModel){
         clearData()
-        for(c in note.canvases){
-            canvasList.value?.add(DrawingCanvas.deserialize(c))
+        for(i in note.canvases.indices){
+            canvasList.value?.add(DrawingCanvas.deserialize(note.canvases[i]))
+            canvasList.value?.last()?.initiateCanvas(i,note.canvases[i])
         }
         viewModelScope.launch(Dispatchers.IO) {
 
             for(i in 0 until note.canvases.size) {
                 val data = canvasList.value?.getOrNull(i) ?: break
                 if(note.canvases[i].hasBG){
-                    data.canvasPaper.setBackground(note.canvases[i].bg)
+                    data.canvasPaper.initiateBackground(i,note.canvases[i].bg)
+                }
+                else{
+                    data.canvasPaper.page = i
+                }
+                viewModelScope.launch(Dispatchers.Default) {
+                    data.canvasPaper.makeEncodedString(note.canvases[i].bg)
                 }
             }
             started = true
@@ -87,7 +102,7 @@ class CanvasViewModel:ViewModel() {
             return
         }
 
-        for(r in result.second!!){
+        for((i,r) in result.second!!.withIndex()){
             if(min(r.x,r.y) > min(context.resources.displayMetrics.widthPixels,context.resources.displayMetrics.heightPixels)*1.2){
                 val rescaleFactor = min(context.resources.displayMetrics.widthPixels,context.resources.displayMetrics.heightPixels) * 1.2 / min(r.x,r.y)
                 canvasList.value?.add(DrawingCanvas((r.x * rescaleFactor).toInt(),(r.y * rescaleFactor).toInt(),true))
@@ -95,6 +110,7 @@ class CanvasViewModel:ViewModel() {
             else {
                 canvasList.value?.add(DrawingCanvas(r.x, r.y, true))
             }
+            canvasList.value?.last()?.initiateCanvas(i)
         }
         viewModelScope.launch(Dispatchers.IO) {
             val descriptor = result.first!!.second
@@ -130,10 +146,12 @@ class CanvasViewModel:ViewModel() {
 
                 bitmap.recycle()
 
-                canvasList.value?.get(i)?.canvasPaper?.setBackground(newBit)
+                canvasList.value?.get(i)?.canvasPaper?.initiateBackground(i,newBit)
+                canvasList.value?.get(i)?.sleep()
                 viewModelScope.launch(Dispatchers.Default) {
                     canvasList.value?.get(i)?.canvasPaper?.makeEncodedString()
                 }
+
             }
             descriptor.close()
             renderer.close()
@@ -142,7 +160,7 @@ class CanvasViewModel:ViewModel() {
         calculateCanvasPositions(50)
     }
 
-    fun clearData(){
+    private fun clearData(){
         activeCanvas = null
         visibleCanvasList.value = listOf()
         canvasList.value = mutableListOf()
@@ -166,7 +184,13 @@ class CanvasViewModel:ViewModel() {
         visibleIdxEnd = to
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onCleared() {
+        GlobalScope.launch(Dispatchers.IO) {
+            BitmapCacheManager.getInstance()?.clearDisk()
+        }
+
+        Log.d("Canvas View Model","View model cleared")
         super.onCleared()
     }
 

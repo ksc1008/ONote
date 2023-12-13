@@ -16,6 +16,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.LinkedList
 import kotlin.math.max
@@ -29,15 +30,22 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
         private set
 
 
-    val canvasPaper: CanvasPaper = CanvasPaper(100,100,width,height, hasBackground)
+    var readyToDrawPath = false
+    var canvasLoading = false
+
+    var canvasPaper: CanvasPaper = CanvasPaper(ROW,COL,width,height, hasBackground)
+        private set
     private val strokeList: LinkedList<CanvasStroke> = LinkedList()
     private val highlighterList: LinkedList<CanvasHighlighter> = LinkedList()
     private val bitmapList: LinkedList<CanvasBitmap> = LinkedList()
     private var bitmapCache: Bitmap? = null
 
-    class CanvasPaper(private val rows:Int, private val cols:Int, private val _width:Int, private val _height:Int, var hasBackground: Boolean = false, encoded:String? = null){
+    class CanvasPaper(private val rows:Int, private val cols:Int, private val _width:Int, private val _height:Int, var hasBackground: Boolean = false){
+        var page:Int = 0
+        var bgLoading = false
+
         val sliceCnt:Int
-        private val pathPoints:MutableList<MutableList<MutableList<CanvasStroke.StrokePoint>>> = mutableListOf()
+        private var pathPoints:MutableList<MutableList<MutableList<CanvasStroke.StrokePoint>>> = mutableListOf()
         var documentSaving: Deferred<Unit>? = null
             private set
 
@@ -51,9 +59,6 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
             private set
 
         var readyToSave = false
-            private set
-
-        var base64Bg:String? = ""
             private set
 
         fun getWidth():Int{
@@ -91,11 +96,9 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
             val idx = getIndex(p.pX,p.pY)
             pathPoints[idx.second][idx.first].remove(p)
         }
-        fun dispose(){
-            pathPoints.clear()
-        }
 
-        fun setBackground(bitmap: Bitmap){
+        fun initiateBackground(pg:Int, bitmap:Bitmap){
+            page = pg
             bgBitmap = bitmap
             bgBitmap.setHasMipMap(true)
             val l:MutableList<Bitmap> = mutableListOf()
@@ -104,108 +107,195 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
                 l.last().setHasMipMap(true)
             }
             l.add(Bitmap.createBitmap(bgBitmap,0,bgBitmap.height/sliceCnt*(sliceCnt-1),bgBitmap.width,bgBitmap.height-(bgBitmap.height/sliceCnt)*(sliceCnt-1)))
-            bgBitmapFraction = l
-            bgLoaded = true
+            BitmapCacheManager.getInstance()?.putPageToCache(page,l)
+            bgLoaded = false
         }
-        fun setBackground(encodedBitmap: String){
+
+        suspend fun initiateBackground(pg:Int,encodedBitmap: String){
+            page = pg
             val decoded = Base64Tool.decodeImage(encodedBitmap)
-            if(decoded!=null) {
-                bgBitmap = decoded
-                bgBitmap.setHasMipMap(true)
-                val l: MutableList<Bitmap> = mutableListOf()
-                for (i in 0 until sliceCnt - 1) {
-                    l.add( Bitmap.createBitmap(
-                            bgBitmap,0,bgBitmap.height / sliceCnt * i,
-                            bgBitmap.width,bgBitmap.height / sliceCnt
-                        )
-                    )
-                    l.last().setHasMipMap(true)
-                }
-                l.add( Bitmap.createBitmap(
-                        bgBitmap,0,bgBitmap.height / sliceCnt * (sliceCnt - 1),
-                        bgBitmap.width,bgBitmap.height - (bgBitmap.height / sliceCnt) * (sliceCnt - 1)
-                    )
-                )
-                bgBitmapFraction = l
+            Log.d("Canvas Decode",encodedBitmap)
+            if(decoded==null) {
+                Log.e("Canvas","Failed to load initial background")
                 hasBackground = false
+                bgLoaded = false
+                readyToSave = true
+                return
             }
-            else{
-                bgBitmap = Bitmap.createBitmap(_width,_height, Bitmap.Config.RGB_565)
-                bgBitmap.eraseColor(Color.WHITE)
-                val l:MutableList<Bitmap> = mutableListOf()
-                for(i in 0 until sliceCnt){
-                    l.add(Bitmap.createBitmap(bgBitmap,0,bgBitmap.height/sliceCnt*i,bgBitmap.width,bgBitmap.height/sliceCnt))
-                    l.last().setHasMipMap(true)
+
+            bgBitmap = decoded
+            bgBitmap.setHasMipMap(true)
+            val l: MutableList<Bitmap> = mutableListOf()
+            for(i in 0 until sliceCnt-1){
+                l.add(Bitmap.createBitmap(bgBitmap,0,bgBitmap.height/sliceCnt*i,bgBitmap.width,bgBitmap.height/sliceCnt))
+                l.last().setHasMipMap(true)
+            }
+            l.add(Bitmap.createBitmap(bgBitmap,0,bgBitmap.height/sliceCnt*(sliceCnt-1),bgBitmap.width,bgBitmap.height-(bgBitmap.height/sliceCnt)*(sliceCnt-1)))
+
+            CoroutineScope(currentCoroutineContext()).launch(Dispatchers.Default) {
+                documentSaving = async {
+                    BitmapCacheManager.getInstance()?.putPageToCache(page,l)
+                    BitmapCacheManager.getInstance()?.putEncodedBackgroundToCache(page,encodedBitmap)
+                    readyToSave = true
+                    bgBitmap.recycle()
                 }
-                bgBitmapFraction = l
-                bgLoaded = true
             }
-            bgBitmap.recycle()
-            bgLoaded = true
+
+            hasBackground = true
             readyToSave = true
         }
 
-        init{
-            sliceCnt = _height / 300
+        fun loadBackground(){
+            bgLoading = true
+            BitmapCacheManager.getInstance()?.getPageAsync(page) {
+                bgLoading = false
+                if (it == null) {
+                    return@getPageAsync
+                }
+                setBackgroundList(it)
+            }
+        }
+
+        private fun setBackgroundList(list:List<Bitmap>){
+            bgBitmapFraction = list
+            bgLoaded = true
+        }
+
+        fun clearBackgroundList(){
+            for(b in bgBitmapFraction){
+                b.recycle()
+            }
+            bgLoaded =false
+            bgBitmapFraction = listOf()
+        }
+
+        fun clearPathList(){
+            pathPoints = mutableListOf()
+        }
+
+        fun resetPathList(){
             for (i: Int in 1..rows) {
                 pathPoints.add(mutableListOf())
                 for (j: Int in 1..cols) {
                     pathPoints.last().add(mutableListOf())
                 }
             }
+        }
 
+        init{
+            sliceCnt = _height / 300
             if(!hasBackground){
-                bgBitmap = Bitmap.createBitmap(_width,_height, Bitmap.Config.RGB_565)
-                bgBitmap.eraseColor(Color.WHITE)
-                val l:MutableList<Bitmap> = mutableListOf()
-                for (i in 0 until sliceCnt - 1) {
-                    l.add( Bitmap.createBitmap(
-                        bgBitmap,0,bgBitmap.height / sliceCnt * i,
-                        bgBitmap.width,bgBitmap.height / sliceCnt
-                    )
-                    )
-                    l.last().setHasMipMap(true)
-                }
-                l.add( Bitmap.createBitmap(
-                    bgBitmap,0,bgBitmap.height / sliceCnt * (sliceCnt - 1),
-                    bgBitmap.width,bgBitmap.height - (bgBitmap.height / sliceCnt) * (sliceCnt - 1)
-                )
-                )
-                bgBitmapFraction = l
-                bgLoaded = true
-            }
-
-            if(encoded!=null){
-                base64Bg = encoded
-                readyToSave = true
+                bgLoaded = false
             }
         }
 
-        suspend fun makeEncodedString(){
+        suspend fun makeEncodedString(preEncoded:String?= null){
             if(readyToSave || !hasBackground) {
                 readyToSave = true
                 return
             }
             CoroutineScope(currentCoroutineContext()).launch(Dispatchers.Default) {
-                documentSaving = async {
-                    base64Bg = Base64Tool.encodeImage(bgBitmap)
-                    readyToSave = true
-                    bgBitmap.recycle()
+                if(preEncoded!=null){
+                    documentSaving = async {
+                        BitmapCacheManager.getInstance()?.putEncodedBackgroundToCache(page,preEncoded?:"")
+                        readyToSave = true
+                        bgBitmap.recycle()
+                    }
+                }
+                else {
+                    documentSaving = async {
+                        val encoded = Base64Tool.encodeImage(bgBitmap)
+                        BitmapCacheManager.getInstance()
+                            ?.putEncodedBackgroundToCache(page, encoded ?: "")
+                        readyToSave = true
+                        bgBitmap.recycle()
+                    }
                 }
             }
         }
     }
 
+    fun initiateCanvas(pg:Int){
+        Log.d("Canvas","Initiating canvas.")
+        BitmapCacheManager.getInstance()?.putCanvasToCache(pg,serializeNoBG(this))
+    }
+    fun initiateCanvas(pg:Int, serialized:CanvasModel){
+        Log.d("Canvas","Initiating canvas.")
+        BitmapCacheManager.getInstance()?.putCanvasToCache(pg,serialized)
+        canvasLoading = false
+        readyToDrawPath = false
+    }
+
+    fun sleep(){
+        canvasLoading = false
+        readyToDrawPath = false
+        BitmapCacheManager.getInstance()?.putCanvasToCache(canvasPaper.page,serializeNoBG(this))
+        clear()
+        canvasPaper.clearBackgroundList()
+        canvasPaper.clearPathList()
+    }
+
+    private fun awake(){
+        canvasLoading = true
+        BitmapCacheManager.getInstance()?.getCanvasAsync(canvasPaper.page) {
+            data->
+
+            Log.d("load result","strokes: ${data?.penStrokes?.size}, bitmaps: ${data?.images?.size}")
+            if (data == null) {
+                Log.e("Canvas","Failed to load. data is null")
+                return@getCanvasAsync
+            }
+            canvasPaper.resetPathList()
+            canvasLoading = false
+            readyToDrawPath = true
+            for(p in data.penStrokes){
+                addStroke(p.x,p.y,MyCanvasView.DrawingToolMod.PEN,p.width,p.color)
+                for(sp in p.points){
+                    appendStroke(sp.x,sp.y,MyCanvasView.DrawingToolMod.PEN)
+                }
+            }
+
+            for(h in data.highlightStrokes){
+                addStroke(h.x,h.y,MyCanvasView.DrawingToolMod.HIGHLIGHTER,h.width,h.color)
+                for(sp in h.points){
+                    appendStroke(sp.x,sp.y,MyCanvasView.DrawingToolMod.HIGHLIGHTER)
+                }
+            }
+
+            for(b in data.images){
+                val bitmap = Base64Tool.decodeImage(b.img)
+                if(bitmap != null){
+                    Log.d("Canvas","Added Bitmap.")
+                    bitmapList.add(CanvasBitmap(b.x,b.y,bitmap))
+                }
+            }
+            canvasPaper.loadBackground()
+            Log.d("load result","Loaded cached canvas")
+
+            redraw()
+        }
+    }
+
     fun lastStroke():CanvasStroke?{
+        if(!isReady())
+            return null
         return strokeList.lastOrNull()
     }
 
     fun lastHighlighter():CanvasHighlighter?{
+        if(!isReady())
+            return null
         return highlighterList.lastOrNull()
     }
 
     fun redraw(){
-        bitmapCache = Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+        if(bitmapCache == null)
+            bitmapCache = Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+        if(!readyToDrawPath) {
+            if(!canvasLoading)
+                awake()
+            return
+        }
         val canvasTemp = Canvas(bitmapCache!!)
         canvasTemp.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
@@ -218,6 +308,15 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
         for(bitmap in bitmapList){
             bitmap.draw(canvasTemp)
         }
+    }
+
+    fun isReady():Boolean{
+        if(!readyToDrawPath) {
+            if (!canvasLoading)
+                awake()
+            return false
+        }
+        return true
     }
 
     fun clear(){
@@ -233,6 +332,8 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
     }
 
     fun addStroke(strokeX:Float, strokeY:Float, penType:MyCanvasView.DrawingToolMod, penWidth:Float, penColor:Int){
+        if(!isReady())
+            return
         val strokePaint = Paint().apply {
             isAntiAlias = true
             isDither = true
@@ -270,6 +371,8 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
     }
 
     fun appendStroke(strokeX:Float, strokeY:Float, penType:MyCanvasView.DrawingToolMod){
+        if(!isReady())
+            return
         if(penType == MyCanvasView.DrawingToolMod.PEN) {
             if (strokeList.isNotEmpty())
                 strokeList.last().appendStroke(strokeX, strokeY)
@@ -297,6 +400,8 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
         return result
     }
     fun eraseCircle(radius:Float, eraseX:Float, eraseY:Float):Boolean{
+        if(!isReady())
+            return false
         fun feasible(i:Int, j:Int):Boolean{
             if((eraseX-j).pow(2) + (eraseY-i).pow(2) > radius.pow(2))
                 return false
@@ -348,6 +453,8 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
         Log.d("Deactivation","Deactivated Canvas")
         bitmapCache?.recycle()
         bitmapCache = null
+        if(readyToDrawPath)
+            sleep()
     }
 
     fun getCache():Bitmap?{
@@ -356,8 +463,12 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
 
 
     fun getBackground():List<Bitmap>{
-        if(!canvasPaper.bgLoaded)
+        if(!canvasPaper.bgLoaded) {
+            if(canvasPaper.hasBackground && !canvasPaper.bgLoading){
+                canvasPaper.loadBackground()
+            }
             return listOf()
+        }
         return canvasPaper.bgBitmapFraction
     }
 
@@ -372,33 +483,21 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
     }
 
     companion object{
-        fun deserialize(data:CanvasModel):DrawingCanvas{
+        const val ROW = 100
+        const val COL = 100
 
-            val canvas = DrawingCanvas(data.width,data.height, data.hasBG)
-            for(p in data.penStrokes){
-                canvas.addStroke(p.x,p.y,MyCanvasView.DrawingToolMod.PEN,p.width,p.color)
-                for(sp in p.points){
-                    canvas.appendStroke(sp.x,sp.y,MyCanvasView.DrawingToolMod.PEN)
-                }
-            }
-
-            for(h in data.highlightStrokes){
-                canvas.addStroke(h.x,h.y,MyCanvasView.DrawingToolMod.HIGHLIGHTER,h.width,h.color)
-                for(sp in h.points){
-                    canvas.appendStroke(sp.x,sp.y,MyCanvasView.DrawingToolMod.HIGHLIGHTER)
-                }
-            }
-
-            for(b in data.images){
-                val bitmap = Base64Tool.decodeImage(b.img)
-                if(bitmap != null)
-                    canvas.addBitmap(CanvasBitmap(b.x,b.y,bitmap))
-            }
-
-            return canvas
+        fun deserialize(data: CanvasModel): DrawingCanvas {
+            return DrawingCanvas(data.width, data.height, data.hasBG)
         }
 
         suspend fun serialize(canvas:DrawingCanvas):CanvasModel{
+            if(!canvas.isReady()){
+                var timeout = 100
+                while(!canvas.isReady() && timeout-- > 0){
+                    delay(100)
+                }
+            }
+
             val pList = mutableListOf<StrokeData>()
             val hList = mutableListOf<StrokeData>()
             val bList = mutableListOf<ImageData>()
@@ -414,13 +513,32 @@ class DrawingCanvas(val width:Int, val height:Int,hasBackground:Boolean = false)
             val bg:String = if(!canvas.canvasPaper.hasBackground)
                 ""
             else if(canvas.canvasPaper.readyToSave)
-                canvas.canvasPaper.base64Bg?:""
+                BitmapCacheManager.getInstance()?.getEncodedImageAsync(canvas.canvasPaper.page)?:""
             else{
                 canvas.canvasPaper.documentSaving?.await()
-                canvas.canvasPaper.base64Bg?:""
+                BitmapCacheManager.getInstance()?.getEncodedImageAsync(canvas.canvasPaper.page)?:""
             }
 
-            return CanvasModel(canvas.width,canvas.height,pList,hList,bList,canvas.canvasPaper.hasBackground,bg)
+            return CanvasModel(canvas.width,canvas.height,pList,hList,bList,canvas.canvasPaper.hasBackground && bg.isNotBlank(),bg)
+        }
+
+        fun serializeNoBG(canvas:DrawingCanvas):CanvasModel{
+            val pList = mutableListOf<StrokeData>()
+            val hList = mutableListOf<StrokeData>()
+            val bList = mutableListOf<ImageData>()
+            for(p in canvas.strokeList){
+                pList.add(CanvasStroke.serialize(p))
+            }
+            for(h in canvas.highlighterList){
+                hList.add(CanvasHighlighter.serialize(h))
+            }
+            for(b in canvas.bitmapList){
+                bList.add(CanvasBitmap.serialize(b))
+            }
+
+            Log.d("Serialize result","strokes: ${pList.size}, bitmaps: ${bList.size}")
+
+            return CanvasModel(canvas.width,canvas.height,pList,hList,bList,false,"")
         }
     }
 }

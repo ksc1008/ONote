@@ -17,7 +17,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
-import com.ksc.onote.OnImageCopiedListener
 import com.ksc.onote.R
 import com.ksc.onote.databinding.FragmentGraphBinding
 import com.ksc.onote.formulaViewer.FormulaViewModel
@@ -26,6 +25,9 @@ import java.util.Base64
 
 
 class GraphFragment : Fragment() {
+    interface OnImageCopiedListener {
+        fun invoke()
+}
     private var axisEnabled = true
     private var gridEnabled = true
 

@@ -6,7 +6,6 @@ import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.text.InputType
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -16,7 +15,6 @@ import android.view.ScaleGestureDetector.SimpleOnScaleGestureListener
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
-import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -24,7 +22,6 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.navigation.NavigationView
 import com.ksc.onote.authorization.AuthorizeManager
 import com.ksc.onote.calculator.CalculatorViewModel
 import com.ksc.onote.canvasViewUI.OnAreaAssignedListener
@@ -33,6 +30,9 @@ import com.ksc.onote.databinding.ActivityCanvasBinding
 import com.ksc.onote.drawingCanvas.CanvasDrawer
 import com.ksc.onote.drawingCanvas.CanvasViewModel
 import com.ksc.onote.calculator.CalculatorFragment
+import com.ksc.onote.dataloader.JsonLoader
+import com.ksc.onote.dataloader.NoteListModel
+import com.ksc.onote.drawingCanvas.BitmapCacheManager
 import com.ksc.onote.drawingCanvas.NoteModel
 import com.ksc.onote.formulaViewer.FormulaFragment
 import com.ksc.onote.formulaViewer.FormulaViewModel
@@ -126,6 +126,7 @@ class CanvasActivity : AppCompatActivity() {
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        BitmapCacheManager.getInstance(this)
 
         Log.d("On Canvas Created:","Canvas Activity Created")
 
@@ -157,7 +158,7 @@ class CanvasActivity : AppCompatActivity() {
         supportFragmentManager.beginTransaction()
             .add(binding.graphFragmentContainer.id, GraphFragment().apply {
                 setOnImageCopiedListener(object:
-                    OnImageCopiedListener {
+                    GraphFragment.OnImageCopiedListener {
                     @RequiresApi(Build.VERSION_CODES.S)
                     override fun invoke() {
                         val img = getGraphImage()
@@ -176,7 +177,7 @@ class CanvasActivity : AppCompatActivity() {
             })
             .add(binding.formulaFragmentContainer.id, FormulaFragment().apply {
                 setOnImageCopiedListener(object:
-                    OnImageCopiedListener {
+                    FormulaFragment.OnImageCopiedListener {
                     override fun invoke() {
                         val img = getFormulaImage()
                         if(img != null) {
@@ -209,7 +210,7 @@ class CanvasActivity : AppCompatActivity() {
             })
             .add(binding.calculationFragmentContainer.id, CalculatorFragment().apply {
                 setOnImageCopiedListener(object:
-                    OnImageCopiedListener {
+                    CalculatorFragment.OnImageCopiedListener {
                     override fun invoke() {
                         val img = getFormulaImage()
                         if(img != null) {
@@ -297,10 +298,15 @@ class CanvasActivity : AppCompatActivity() {
         super.onStart()
         if(canvasViewModel.started)
             return
-        canvasViewModel.noteName = intent.getStringExtra("Name")?:"UnNamed Note"
-        supportActionBar?.title = canvasViewModel.noteName
 
-        when(intent.getStringExtra("Type")){
+        startLoading(intent.getStringExtra("Name")?:"UnNamed Note", intent.getStringExtra("Type"))
+    }
+
+    private fun startLoading(name:String, type:String?){
+        canvasViewModel.noteName = name
+        supportActionBar?.title = name
+
+        when(type){
             null->canvasViewModel.createEmpty(2000,2000)
             "from_uri"->{
                 val uri:Uri? = Uri.parse(intent.getStringExtra("uri"))
@@ -310,12 +316,18 @@ class CanvasActivity : AppCompatActivity() {
                 canvasViewModel.isNew = true
             }
             "from_json"->{
-                val json:String? = intent.getStringExtra("data")
+                if(JsonLoader.getInstance(this)?.hasData() != true){
+                    failToLoad()
+                    return
+                }
+                val json:String? = JsonLoader.getInstance(this)?.loadData().toString()
                 if(json==null){
-                    canvasViewModel.createEmpty(2000,2000)
+                    failToLoad()
+                    return
                 }
                 else{
                     val model = Json.decodeFromString<NoteModel>(json)
+                    JsonLoader.getInstance()?.releaseData()
                     canvasViewModel.createFromData(model)
                 }
                 canvasViewModel.isNew = false
@@ -325,6 +337,11 @@ class CanvasActivity : AppCompatActivity() {
                 canvasViewModel.isNew = true
             }
         }
+    }
+
+    private fun failToLoad(){
+        Toast.makeText(this,"Failed to load note.",Toast.LENGTH_LONG).show()
+        finish()
     }
 
     fun updateCalculation(result: String){
@@ -404,6 +421,7 @@ class CanvasActivity : AppCompatActivity() {
         super.onWindowFocusChanged(hasFocus)
     }
 
+    @Suppress("DEPRECATION")
     private fun hideSystemUI() {
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
             val controller = window.insetsController
@@ -458,13 +476,21 @@ class CanvasActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    fun save(){
+    private fun save(){
         if(saving)
             return
         var ctime = System.currentTimeMillis()
         saving = true
         scope.launch {
             val data = canvasViewModel.toDataAsync()
+
+            if(data == null){
+                Log.e("Upload Note","Wait.")
+                Toast.makeText(baseContext, "Wait until the note is completely loaded", Toast.LENGTH_SHORT).show()
+                saving = false
+                return@launch
+            }
+
             Log.d("Json Parse","To data, elapsed: ${System.currentTimeMillis()-ctime}ms")
             ctime = System.currentTimeMillis()
             val jelem = Json.encodeToJsonElement(data)

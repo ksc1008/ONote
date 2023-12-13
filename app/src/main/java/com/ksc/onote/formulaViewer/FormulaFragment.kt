@@ -18,7 +18,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.daasuu.ei.Ease
 import com.daasuu.ei.EasingInterpolator
-import com.ksc.onote.OnImageCopiedListener
 import com.ksc.onote.R
 import com.ksc.onote.ServerRequestViewModel
 import com.ksc.onote.databinding.FragmentFormulaBinding
@@ -27,7 +26,9 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class FormulaFragment : Fragment() {
-
+    interface OnImageCopiedListener {
+        fun invoke()
+    }
     interface OnViewDestroyedListener{
         fun invoke()
     }

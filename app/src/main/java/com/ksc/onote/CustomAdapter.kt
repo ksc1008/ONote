@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.ksc.onote.databinding.NoteMenuItemBinding
+import com.ksc.onote.dataloader.NoteListModel
 
 class CustomAdapter() :
     RecyclerView.Adapter<CustomAdapter.ViewHolder>() {

@@ -1,9 +1,9 @@
-package com.ksc.onote
+package com.ksc.onote.dataloader
 
-import android.content.Context
 import android.util.Log
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+import com.ksc.onote.FirstFragment
+import com.ksc.onote.NetworkGetListener
+import com.ksc.onote.NetworkManager
 import org.json.JSONArray
 
 class NoteListModel {
@@ -11,7 +11,7 @@ class NoteListModel {
         fun invokeListChange()
     }
 
-    private var noteListListener:NoteListListener? = null
+    private var noteListListener: NoteListListener? = null
 
     private var _noteList:MutableList<String> = mutableListOf()
 
@@ -55,7 +55,7 @@ class NoteListModel {
     }
 
     fun renewNoteList(){
-        NetworkManager.getInstance()?.getRequestNameList(object:NetworkGetListener<JSONArray>{
+        NetworkManager.getInstance()?.getRequestNameList(object: NetworkGetListener<JSONArray> {
             override fun getResult(`object`: JSONArray) {
                 setNote(`object`)
             }

@@ -9,23 +9,6 @@ import java.io.ByteArrayOutputStream
 import java.util.Base64
 
 
-private fun longLog(TAG:String, msg:String){
-    val len = msg.length
-    val MAX_LEN = 2000
-        if (len > MAX_LEN) {
-            var idx = 0
-            var nextIdx = 0
-            while (idx < len) {
-                nextIdx += MAX_LEN
-                Log.d(TAG, msg.substring(idx, if (nextIdx > len) len else nextIdx))
-                idx = nextIdx
-            }
-        }
-    else{
-            Log.d(TAG,msg)
-        }
-}
-
 class ServerRequestViewModel: ViewModel() {
     suspend fun getFormulaFromServer(image: Bitmap):Pair<String,Boolean>{
         var finished = false
